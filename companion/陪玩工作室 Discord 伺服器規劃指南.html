@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>陪玩工作室 Discord 伺服器規劃指南</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+    .hero {
+      background: linear-gradient(135deg, #5865F2, #7289da, #9b59b6);
+      padding: 48px 24px;
+      text-align: center;
+    }
+    .hero h1 { font-size: 2.2rem; color: #fff; margin-bottom: 8px; }
+    .hero p { color: #ddd; font-size: 1rem; }
+    .container { max-width: 960px; margin: 0 auto; padding: 32px 16px; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 28px; }
+    .tab-btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 24px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      background: #2a2a4a;
+      color: #aaa;
+      transition: all 0.2s;
+    }
+    .tab-btn.active, .tab-btn:hover {
+      background: #5865F2;
+      color: #fff;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Cards */
+    .card {
+      background: #16213e;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      border-left: 4px solid #5865F2;
+    }
+    .card h2 { font-size: 1.2rem; color: #7289da; margin-bottom: 16px; }
+    .card h3 { font-size: 1rem; color: #a0aec0; margin: 14px 0 8px; }
+
+    /* Role List */
+    .role-list { list-style: none; }
+    .role-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: #0f3460;
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
+    .role-badge {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .role-name { font-weight: 700; font-size: 0.95rem; }
+    .role-desc { font-size: 0.8rem; color: #888; margin-left: auto; }
+    .role-rank {
+      font-size: 0.75rem;
+      background: #5865F2;
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+
+    /* Channel List */
+    .category-block {
+      background: #0f3460;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .category-header {
+      background: #5865F2;
+      padding: 10px 16px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .channel-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid #1a1a3e;
+      font-size: 0.9rem;
+    }
+    .channel-item:last-child { border-bottom: none; }
+    .channel-name { display: flex; align-items: center; gap: 8px; }
+    .channel-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tag {
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+    .tag-view { background: #2d6a4f; color: #74c69d; }
+    .tag-write { background: #1d4e89; color: #74b9ff; }
+    .tag-admin { background: #6b2737; color: #ff7675; }
+    .tag-hidden { background: #333; color: #888; }
+    .tag-bot { background: #4a235a; color: #d7a2ff; }
+
+    /* Permission Table */
+    .perm-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .perm-table th {
+      background: #5865F2;
+      color: #fff;
+      padding: 10px 12px;
+      text-align: left;
+    }
+    .perm-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #2a2a4a;
+    }
+    .perm-table tr:nth-child(even) td { background: #0f1a35; }
+    .perm-table tr:hover td { background: #1a2a50; }
+    .yes { color: #74c69d; font-weight: 700; }
+    .no { color: #ff7675; font-weight: 700; }
+    .view-only { color: #ffd166; font-weight: 700; }
+
+    /* Flow */
+    .flow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+    .flow-step {
+      background: #0f3460;
+      border: 2px solid #5865F2;
+      border-radius: 12px;
+      padding: 14px 28px;
+      text-align: center;
+      font-weight: 600;
+      min-width: 260px;
+      font-size: 0.95rem;
+    }
+    .flow-arrow {
+      color: #5865F2;
+      font-size: 1.5rem;
+      line-height: 1.2;
+    }
+
+    /* Steps */
+    .step-list { list-style: none; counter-reset: step; }
+    .step-item {
+      counter-increment: step;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+    .step-num {
+      background: #5865F2;
+      color: #fff;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      flex-shrink: 0;
+      font-size: 0.9rem;
+    }
+    .step-text { padding-top: 4px; font-size: 0.95rem; line-height: 1.6; }
+    .step-text strong { color: #7289da; }
+
+    /* Tips */
+    .tip-box {
+      background: #1a3a2a;
+      border-left: 4px solid #74c69d;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: #a8d8b9;
+    }
+    .warn-box {
+      background: #3a2a1a;
+      border-left: 4px solid #ffd166;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: #ffe0a0;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <h1>🎮 陪玩工作室 Discord 規劃指南</h1>
+    <p>完整的伺服器架構 · 身分組設定 · 頻道權限配置</p>
+  </div>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="showTab('roles')">👥 身分組</button>
+      <button class="tab-btn" onclick="showTab('channels')">📁 頻道架構</button>
+      <button class="tab-btn" onclick="showTab('permissions')">🔒 權限配置</button>
+      <button class="tab-btn" onclick="showTab('flow')">🔄 客戶流程</button>
+      <button class="tab-btn" onclick="showTab('setup')">⚙️ 設定步驟</button>
+    </div>
+
+    <!-- 身分組 -->
+    <div id="tab-roles" class="tab-content active">
+      <div class="card">
+        <h2>👥 身分組層級（由高到低）</h2>
+        <ul class="role-list">
+          <li class="role-item">
+            <div class="role-badge" style="background:#FFD700"></div>
+            <span class="role-name">👑 工作室主</span>
+            <span class="role-desc">擁有全部管理員權限</span>
+            <span class="role-rank">Lv.1</span>
+          </li>
+          <li class="role-item">
+            <div class="role-badge" style="background:#e74c3c"></div>
+            <span class="role-name">🛡️ 管理員</span>
+            <span class="role-desc">除刪除伺服器外全權限</span>
+            <span class="role-rank">Lv.2</span>
+          </li>
+          <li class="role-item">
+            <div class="role-badge" style="background:#9b59b6"></div>
+            <span class="role-name">🏆 好評王</span>
+            <span class="role-desc">頂尖陪玩員特殊榮譽</span>
+            <span class="role-rank">Lv.3</span>
+          </li>
+          <li class="role-item">
+            <div class="role-badge" style="background:#00cec9"></div>
+            <span class="role-name">⭐ 特殊員工</span>
+            <span class="role-desc">首位招募者特殊身分</span>
+            <span class="role-rank">Lv.4</span>
+          </li>
+          <li class="role-item">
+            <div class="role-badge" style="background:#3498db"></div>
+            <span class="role-name">🎮 陪玩員</span>
+            <span class="role-desc">一般員工</span>
+            <span class="role-rank">Lv.5</span>
+          </li>
+          <li class="role-item">
+            <div class="role-badge" style="background:#95a5a6"></div>
+            <span class="role-name">👤 客戶</span>
+            <span class="role-desc">驗證後的一般客人</span>
+            <span class="role-rank">Lv.6</span>
+          </li>
+          <li class="role-item">
+            <div class="role-badge" style="background:#444"></div>
+            <span class="role-name">@everyone</span>
+            <span class="role-desc">剛進伺服器的陌生人 — 全部關閉</span>
+            <span class="role-rank">最低</span>
+          </li>
+        </ul>
+        <div class="warn-box">⚠️ @everyone 所有權限全部關閉！讓陌生人進來什麼都看不到，直到完成驗證取得「客戶」身分組。</div>
+      </div>
+
+      <div class="card">
+        <h2>🔑 各身分組關鍵權限</h2>
+        <div class="grid-2">
+          <div>
+            <h3>👤 客戶</h3>
+            <ul style="list-style:none;font-size:0.88rem;line-height:2">
+              <li>✅ 查看公開頻道</li>
+              <li>✅ 在下單頻道發文</li>
+              <li>✅ 使用 Bot 指令</li>
+              <li>❌ 看不到員工區</li>
+              <li>❌ 看不到管理員區</li>
+            </ul>
+          </div>
+          <div>
+            <h3>🎮 陪玩員</h3>
+            <ul style="list-style:none;font-size:0.88rem;line-height:2">
+              <li>✅ 查看員工專區</li>
+              <li>✅ 員工討論發文</li>
+              <li>✅ 查看積分榜單</li>
+              <li>❌ 看不到管理員區</li>
+              <li>❌ 無法管理頻道</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 頻道架構 -->
+    <div id="tab-channels" class="tab-content">
+      <div class="card">
+        <h2>📁 完整頻道架構</h2>
+
+        <div class="category-block">
+          <div class="category-header">📢 公告區</div>
+          <div class="channel-item">
+            <span class="channel-name">📣 最新公告</span>
+            <div class="channel-tags">
+              <span class="tag tag-view">客戶可看</span>
+              <span class="tag tag-admin">管理員發文</span>
+            </div>
+          </div>
+          <div class="channel-item">
+            <span class="channel-name">🎉 活動資訊</span>
+            <div class="channel-tags">
+              <span class="tag tag-view">客戶可看</span>
+              <span class="tag tag-admin">管理員發文</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="category-block">
+          <div class="category-header">📋 服務資訊區</div>
+          <div class="channel-item">
+            <span class="channel-name">📋 服務介紹</span>
+            <div class="channel-tags">
+              <span class="tag tag-view">客戶可看</span>
+              <span class="tag tag-admin">管理員發文</span>
+            </div>
+          </div>
+          <div class="channel-item">
+            <span class="channel-name">👥 陪玩員介紹</span>
+            <div class="channel-tags">
+              <span class="tag tag-view">客戶可看</span>
+              <span class="tag tag-admin">管理員發文</span>
+            </div>
+          </div>
+          <div class="channel-item">
+            <span class="channel-name">❓ 常見問題</span>
+            <div class="channel-tags">
+              <span class="tag tag-view">客戶可看</span>
+              <span class="tag tag-admin">管理員發文</span>
+            </div>
+          </div>
+          <div class="channel-item">
+            <span class="channel-name">⭐ 好評牆</span>
+            <div class="channel-tags">
+              <span class="tag tag-view">客戶可看</span>
+              <span class="tag tag-bot">Bot 自動發文</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="category-block">
+          <div class="category-header">🛒 下單區</div>
+          <div class="channel-item">
+            <span class="channel-name">🛒 下單</span>
+            <div class="channel-tags">
+              <span class="tag tag-write">客戶可發文</span>
+              <span class="tag tag-bot">Bot 處理</span>
+            </div>
+          </div>
+          <div class="channel-item">
+            <span class="channel-name">💬 客服詢問</span>
+            <div class="channel-tags">
+              <span class="tag tag-write">客戶可發文</span>
+              <span class="tag tag-admin">管理員回覆</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="category-block">
+          <div class="category-header">🏆 員工專區（客戶看不到）</div>
+          <div class="channel-item">
+            <span class="channel-name">📊 積分榜單</span>
+            <div class="channel-tags">
+              <span class="tag tag-view">員工可看</span>
+              <span class="tag tag-bot">Bot 更新</span>
+            </div>
+          </div>
+          <div class="channel-item">
+            <span class="channel-name">📦 訂單紀錄</span>
+            <div class="channel-tags">
+              <span class="tag tag-view">員工可看</span>
+              <span class="tag tag-bot">Bot 更新</span>
+            </div>
+          </div>
+          <div class="channel-item">
+            <span class="channel-name">📢 員工公告</span>
+            <div class="channel-tags">
+              <span class="tag tag-view">員工可看</span>
+              <span class="tag tag-admin">管理員發文</span>
+            </div>
+          </div>
+          <div class="channel-item">
+            <span class="channel-name">💬 員工討論</span>
+            <div class="channel-tags">
+              <span class="tag tag-write">員工可發文</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="category-block">
+          <div class="category-header">🎙️ 語音區</div>
+          <div class="channel-item">
+            <span class="channel-name">🎮 陪玩室 1 / 2 / 3</span>
+            <div class="channel-tags">
+              <span class="tag tag-write">客戶+員工可加入</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="category-block">
+          <div class="category-header">🔒 管理員區（只有管理員看得到）</div>
+          <div class="channel-item">
+            <span class="channel-name">📊 訂單總覽</span>
+            <div class="channel-tags">
+              <span class="tag tag-admin">管理員專屬</span>
+            </div>
+          </div>
+          <div class="channel-item">
+            <span class="channel-name">💼 管理討論</span>
+            <div class="channel-tags">
+              <span class="tag tag-admin">管理員專屬</span>
+            </div>
+          </div>
+          <div class="channel-item">
+            <span class="channel-name">🤖 Bot 控制台</span>
+            <div class="channel-tags">
+              <span class="tag tag-admin">管理員專屬</span>
+              <span class="tag tag-bot">Bot 指令</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 權限配置 -->
+    <div id="tab-permissions" class="tab-content">
+      <div class="card">
+        <h2>🔒 頻道權限總表</h2>
+        <div style="overflow-x:auto">
+          <table class="perm-table">
+            <thead>
+              <tr>
+                <th>頻道</th>
+                <th>@everyone</th>
+                <th>👤 客戶</th>
+                <th>🎮 陪玩員</th>
+                <th>🛡️ 管理員</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>📣 公告 / 服務介紹</td><td class="no">❌</td><td class="view-only">👁️ 看</td><td class="view-only">👁️ 看</td><td class="yes">✏️ 發文</td></tr>
+              <tr><td>⭐ 好評牆</td><td class="no">❌</td><td class="view-only">👁️ 看</td><td class="view-only">👁️ 看</td><td class="yes">✏️ 發文</td></tr>
+              <tr><td>🛒 下單頻道</td><td class="no">❌</td><td class="yes">✏️ 發文</td><td class="view-only">👁️ 看</td><td class="yes">✏️ 發文</td></tr>
+              <tr><td>💬 客服詢問</td><td class="no">❌</td><td class="yes">✏️ 發文</td><td class="view-only">👁️ 看</td><td class="yes">✏️ 發文</td></tr>
+              <tr><td>📊 積分榜單</td><td class="no">❌</td><td class="no">❌</td><td class="view-only">👁️ 看</td><td class="yes">✏️ 發文</td></tr>
+              <tr><td>💬 員工討論</td><td class="no">❌</td><td class="no">❌</td><td class="yes">✏️ 發文</td><td class="yes">✏️ 發文</td></tr>
+              <tr><td>🔒 管理員區全部</td><td class="no">❌</td><td class="no">❌</td><td class="no">❌</td><td class="yes">✏️ 全權限</td></tr>
+              <tr><td>🎮 語音陪玩室</td><td class="no">❌</td><td class="yes">✅ 加入</td><td class="yes">✅ 加入</td><td class="yes">✅ 全權限</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>⚙️ 權限設定原則</h2>
+        <div class="grid-2">
+          <div>
+            <h3>伺服器身分組層級</h3>
+            <p style="font-size:0.88rem;color:#aaa;line-height:1.8;margin-top:8px">
+              只給最基本的權限<br>
+              例如：讀取訊息歷史<br>
+              <strong style="color:#ffd166">不要在這裡開發送訊息</strong>
+            </p>
+          </div>
+          <div>
+            <h3>頻道層級（優先）</h3>
+            <p style="font-size:0.88rem;color:#aaa;line-height:1.8;margin-top:8px">
+              在每個頻道單獨設定<br>
+              頻道權限會蓋過身分組<br>
+              <strong style="color:#74c69d">精準控制每個頻道</strong>
+            </p>
+          </div>
+        </div>
+        <div class="tip-box">💡 建議使用「類別（Category）同步權限」功能，同一類別的頻道只需設定一次，底下所有頻道自動套用！</div>
+      </div>
+    </div>
+
+    <!-- 客戶流程 -->
+    <div id="tab-flow" class="tab-content">
+      <div class="card">
+        <h2>🔄 客戶進入伺服器流程</h2>
+        <div class="flow">
+          <div class="flow-step">🆕 新成員加入伺服器</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-step">只看得到 👋 歡迎頻道</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-step">點擊 ✅ 按鈕 / 表情符號驗證</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-step">🤖 Bot 自動給予「👤 客戶」身分組</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-step">解鎖 📋 服務介紹、🛒 下單區等頻道</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-step">✅ 可以正常瀏覽與下單</div>
+        </div>
+        <div class="tip-box" style="margin-top:20px">💡 推薦使用 <strong>Carl-bot</strong> 或 <strong>MEE6</strong> 實現點擊自動給身分組，完全免費！</div>
+      </div>
+    </div>
+
+    <!-- 設定步驟 -->
+    <div id="tab-setup" class="tab-content">
+      <div class="card">
+        <h2>⚙️ 實際設定步驟</h2>
+        <ul class="step-list">
+          <li class="step-item">
+            <div class="step-num">1</div>
+            <div class="step-text"><strong>建立所有身分組</strong><br>伺服器設定 → 身分組 → 依照層級順序建立（工作室主 → 管理員 → 好評王 → 特殊員工 → 陪玩員 → 客戶）</div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">2</div>
+            <div class="step-text"><strong>@everyone 全部關閉</strong><br>身分組 → @everyone → 所有權限設為 ❌，特別確認「查看頻道」「發送訊息」「建立邀請」都是關閉的</div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">3</div>
+            <div class="step-text"><strong>建立頻道類別與頻道</strong><br>依照架構建立：公告區、服務資訊區、下單區、員工專區、語音區、管理員區</div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">4</div>
+            <div class="step-text"><strong>設定每個類別的權限</strong><br>對類別按右鍵 → 編輯類別 → 權限 → 加入對應身分組並設定查看/發文權限</div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">5</div>
+            <div class="step-text"><strong>頻道同步類別權限</strong><br>對頻道按右鍵 → 編輯頻道 → 權限 → 點「同步類別權限」，省去逐一設定</div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">6</div>
+            <div class="step-text"><strong>安裝 Carl-bot 設定驗證</strong><br>邀請 Carl-bot 進伺服器 → 設定 Reaction Roles → 在歡迎頻道設定點擊給「客戶」身分組</div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">7</div>
+            <div class="step-text"><strong>測試所有權限</strong><br>用小號分別測試「未驗證」「客戶」「陪玩員」三種身分，確認看到的頻道正確</div>
+          </li>
+        </ul>
+        <div class="warn-box">⚠️ 設定完務必用小號測試！很多人設定完以為沒問題，結果客戶看到不該看的頻道。</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showTab(name) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById('tab-' + name).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>
