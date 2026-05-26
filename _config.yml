@@ -1,0 +1,16 @@
+title: References
+description: A personal collection of references — Markdown, HTML, and PDF.
+baseurl: "/references"
+url: "https://michaelchung1211.github.io"
+
+markdown: kramdown
+plugins: []
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - README.md
+  - vendor
+  - .bundle
+  - .gitignore
+  - node_modules

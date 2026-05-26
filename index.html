@@ -1,0 +1,76 @@
+---
+layout: null
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ site.title }}</title>
+  <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
+</head>
+<body>
+<header>
+  <h1>{{ site.title }}</h1>
+  <p class="muted">{{ site.description }}</p>
+</header>
+
+<main>
+{% assign refs = site.static_files | where_exp: "f", "f.extname == '.md' or f.extname == '.markdown' or f.extname == '.html' or f.extname == '.htm' or f.extname == '.pdf'" %}
+
+{% if refs.size == 0 %}
+  <p class="empty">No references yet. Create a topic folder (e.g. <code>react/</code>) and drop <code>.md</code>, <code>.html</code>, or <code>.pdf</code> files into it.</p>
+{% else %}
+  {% assign topic_list = "" %}
+  {% for f in refs %}
+    {% assign clean = f.path | remove_first: "/" %}
+    {% assign segments = clean | split: "/" %}
+    {% if segments.size > 1 %}
+      {% assign t = segments[0] %}
+    {% else %}
+      {% assign t = "(root)" %}
+    {% endif %}
+    {% assign needle = "||" | append: t | append: "||" %}
+    {% assign haystack = "||" | append: topic_list | append: "||" %}
+    {% unless haystack contains needle %}
+      {% assign topic_list = topic_list | append: t | append: "|" %}
+    {% endunless %}
+  {% endfor %}
+  {% assign topics = topic_list | split: "|" | sort %}
+
+  {% for topic in topics %}
+    {% if topic == "" %}{% continue %}{% endif %}
+    <section>
+      <h2>{{ topic }}</h2>
+      <ul>
+        {% assign topic_files = refs | sort: "name" %}
+        {% for f in topic_files %}
+          {% assign clean = f.path | remove_first: "/" %}
+          {% assign segments = clean | split: "/" %}
+          {% if segments.size > 1 %}
+            {% assign f_topic = segments[0] %}
+          {% else %}
+            {% assign f_topic = "(root)" %}
+          {% endif %}
+          {% if f_topic == topic %}
+            {% assign ext = f.extname | remove_first: "." | downcase %}
+            {% if ext == "md" or ext == "markdown" %}
+              <li><a href="{{ '/viewer.html' | relative_url }}?path={{ f.path | relative_url | url_encode }}">{{ f.name }}</a> <span class="tag">md</span></li>
+            {% else %}
+              <li><a href="{{ f.path | relative_url }}">{{ f.name }}</a> <span class="tag">{{ ext }}</span></li>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      </ul>
+    </section>
+  {% endfor %}
+{% endif %}
+</main>
+
+<footer>
+  <p class="muted">
+    <a href="https://github.com/michaelchung1211/references">repo</a>
+  </p>
+</footer>
+</body>
+</html>

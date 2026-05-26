@@ -1,0 +1,60 @@
+---
+layout: null
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Viewer</title>
+  <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
+  <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+</head>
+<body>
+<header>
+  <p><a href="{{ '/' | relative_url }}">&larr; back to index</a></p>
+  <h1 id="title">Loading&hellip;</h1>
+</header>
+<main id="content" class="markdown-body">Loading&hellip;</main>
+
+<script>
+(function () {
+  var BASEURL = {{ site.baseurl | jsonify }};
+  var params = new URLSearchParams(location.search);
+  var path = params.get('path');
+  var content = document.getElementById('content');
+  var titleEl = document.getElementById('title');
+
+  if (!path) {
+    content.textContent = 'No path specified.';
+    titleEl.textContent = 'Viewer';
+    return;
+  }
+
+  var prefix = (BASEURL || '') + '/';
+  if (path.indexOf(prefix) !== 0 && path.indexOf('/') !== 0) {
+    content.textContent = 'Invalid path.';
+    return;
+  }
+
+  var fileName = path.split('/').pop();
+  document.title = fileName;
+  titleEl.textContent = fileName;
+
+  fetch(path)
+    .then(function (res) {
+      if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
+      return res.text();
+    })
+    .then(function (md) {
+      var html = DOMPurify.sanitize(marked.parse(md));
+      content.innerHTML = html;
+    })
+    .catch(function (e) {
+      content.textContent = 'Failed to load: ' + e.message;
+    });
+})();
+</script>
+</body>
+</html>
