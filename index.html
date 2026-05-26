@@ -16,7 +16,12 @@ layout: null
 </header>
 
 <main>
-{% assign refs = site.static_files | where_exp: "f", "f.extname == '.md' or f.extname == '.markdown' or f.extname == '.html' or f.extname == '.htm' or f.extname == '.pdf'" %}
+{% assign md_files       = site.static_files | where: "extname", ".md" %}
+{% assign markdown_files = site.static_files | where: "extname", ".markdown" %}
+{% assign html_files     = site.static_files | where: "extname", ".html" %}
+{% assign htm_files      = site.static_files | where: "extname", ".htm" %}
+{% assign pdf_files      = site.static_files | where: "extname", ".pdf" %}
+{% assign refs = md_files | concat: markdown_files | concat: html_files | concat: htm_files | concat: pdf_files %}
 
 {% if refs.size == 0 %}
   <p class="empty">No references yet. Create a topic folder (e.g. <code>react/</code>) and drop <code>.md</code>, <code>.html</code>, or <code>.pdf</code> files into it.</p>

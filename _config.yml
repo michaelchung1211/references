@@ -6,6 +6,20 @@ url: "https://michaelchung1211.github.io"
 markdown: kramdown
 plugins: []
 
+# GitHub Pages auto-loads several plugins by default. Disable the ones
+# that would interfere with how we treat .md files (we want them to
+# remain as static files so viewer.html can fetch + render them).
+optional_front_matter:
+  enabled: false
+readme_index:
+  enabled: false
+default_layout:
+  enabled: false
+titles_from_headings:
+  enabled: false
+relative_links:
+  enabled: false
+
 exclude:
   - Gemfile
   - Gemfile.lock
