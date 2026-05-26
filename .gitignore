@@ -6,3 +6,9 @@ vendor/
 Gemfile.lock
 .DS_Store
 node_modules/
+package-lock.json
+
+# Plaintext source for encrypted content — NEVER commit.
+# Only the ciphertext in `encrypted/` should be tracked.
+_plaintext/
+.encrypt-cache.json

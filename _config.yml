@@ -28,3 +28,11 @@ exclude:
   - .bundle
   - .gitignore
   - node_modules
+  - package.json
+  - package-lock.json
+  - tools
+  - _plaintext
+
+# Note: encrypted/ is intentionally NOT excluded — GitHub Pages must serve
+# the ciphertext blobs and manifest.enc. The auto-index in index.html filters
+# /encrypted/* out of the plaintext listing; the locked UI handles them.

@@ -1,0 +1,16 @@
+{
+  "name": "references-encrypt",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Build-time encryption CLI for the references static site.",
+  "type": "module",
+  "scripts": {
+    "encrypt": "node tools/encrypt.mjs"
+  },
+  "dependencies": {
+    "hash-wasm": "^4.11.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -18,43 +18,191 @@ layout: null
 </header>
 <main id="content" class="markdown-body">Loading&hellip;</main>
 
-<script>
-(function () {
-  var BASEURL = {{ site.baseurl | jsonify }};
-  var params = new URLSearchParams(location.search);
-  var path = params.get('path');
-  var content = document.getElementById('content');
-  var titleEl = document.getElementById('title');
+<form id="unlock-form" hidden>
+  <p class="muted">This file is encrypted. Enter the password for group <strong id="unlock-group"></strong>.</p>
+  <label>
+    Password:
+    <input id="unlock-pw" type="password" autocomplete="current-password" required>
+  </label>
+  <button type="submit">Unlock</button>
+  <div id="unlock-error" class="muted" role="alert"></div>
+</form>
 
-  if (!path) {
+<script type="module">
+  import {
+    decryptManifest,
+    decryptBlob,
+    deriveKey,
+    utf8Decode,
+    b64ToBytes,
+  } from '{{ "/crypto.js" | relative_url }}';
+
+  const BASEURL = {{ site.baseurl | jsonify }};
+  const params = new URLSearchParams(location.search);
+  const content = document.getElementById('content');
+  const titleEl = document.getElementById('title');
+  const unlockForm = document.getElementById('unlock-form');
+  const unlockGroupEl = document.getElementById('unlock-group');
+  const unlockErrorEl = document.getElementById('unlock-error');
+
+  const encBlob = params.get('blob');
+  const plainPath = params.get('path');
+
+  if (encBlob) {
+    await renderEncrypted(encBlob, params.get('group'), params.get('type'), params.get('name'));
+  } else if (plainPath) {
+    await renderPlain(plainPath);
+  } else {
     content.textContent = 'No path specified.';
     titleEl.textContent = 'Viewer';
-    return;
   }
 
-  var prefix = (BASEURL || '') + '/';
-  if (path.indexOf(prefix) !== 0 && path.indexOf('/') !== 0) {
-    content.textContent = 'Invalid path.';
-    return;
-  }
-
-  var fileName = path.split('/').pop();
-  document.title = fileName;
-  titleEl.textContent = fileName;
-
-  fetch(path)
-    .then(function (res) {
+  // ---------- plaintext path (unchanged behavior) ----------
+  async function renderPlain(path) {
+    const prefix = (BASEURL || '') + '/';
+    if (path.indexOf(prefix) !== 0 && path.indexOf('/') !== 0) {
+      content.textContent = 'Invalid path.';
+      return;
+    }
+    const fileName = path.split('/').pop();
+    document.title = fileName;
+    titleEl.textContent = fileName;
+    try {
+      const res = await fetch(path);
       if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
-      return res.text();
-    })
-    .then(function (md) {
-      var html = DOMPurify.sanitize(marked.parse(md));
-      content.innerHTML = html;
-    })
-    .catch(function (e) {
+      const md = await res.text();
+      content.innerHTML = DOMPurify.sanitize(marked.parse(md));
+    } catch (e) {
       content.textContent = 'Failed to load: ' + e.message;
+    }
+  }
+
+  // ---------- encrypted path ----------
+  async function renderEncrypted(blobName, group, type, name) {
+    document.title = name || 'Encrypted';
+    titleEl.textContent = name || 'Encrypted file';
+
+    const manifest = await loadManifest();
+    if (!manifest) {
+      content.textContent = 'Manifest is locked. Go back to the index and unlock first.';
+      return;
+    }
+    const file = manifest.files.find((f) => f.blob === blobName && f.group === group);
+    if (!file) {
+      content.textContent = 'File not found in manifest.';
+      return;
+    }
+    const groupMeta = manifest.groups[group];
+    if (!groupMeta) {
+      content.textContent = 'Group not found in manifest.';
+      return;
+    }
+
+    let blobBytes;
+    try {
+      blobBytes = new Uint8Array(
+        await (await fetch((BASEURL || '') + '/encrypted/blobs/' + blobName)).arrayBuffer()
+      );
+    } catch (e) {
+      content.textContent = 'Failed to fetch blob: ' + e.message;
+      return;
+    }
+
+    const salt = b64ToBytes(groupMeta.salt);
+    const sessionKey = 'group-pw:' + group;
+    let cachedPw = sessionStorage.getItem(sessionKey);
+
+    while (true) {
+      let pw = cachedPw || (await promptForGroupPassword(group));
+      if (!pw) { content.textContent = 'Cancelled.'; return; }
+      content.textContent = 'Decrypting…';
+      try {
+        const key = await deriveKey(pw, salt);
+        const plaintext = await decryptBlob(key, blobBytes);
+        sessionStorage.setItem(sessionKey, pw);
+        unlockForm.hidden = true;
+        renderDecrypted(plaintext, file);
+        return;
+      } catch (_e) {
+        sessionStorage.removeItem(sessionKey);
+        cachedPw = null;
+        unlockErrorEl.textContent = 'Wrong password — try again.';
+      }
+    }
+  }
+
+  function renderDecrypted(bytes, file) {
+    if (file.type === 'md') {
+      content.innerHTML = DOMPurify.sanitize(marked.parse(utf8Decode(bytes)));
+    } else if (file.type === 'pdf') {
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+      content.innerHTML = '';
+      const iframe = document.createElement('iframe');
+      iframe.src = url;
+      iframe.style.width = '100%';
+      iframe.style.height = '85vh';
+      iframe.style.border = '0';
+      content.appendChild(iframe);
+    } else if (file.type === 'html') {
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'text/html' }));
+      content.innerHTML = '';
+      const iframe = document.createElement('iframe');
+      iframe.src = url;
+      iframe.setAttribute('sandbox', 'allow-same-origin');
+      iframe.style.width = '100%';
+      iframe.style.height = '85vh';
+      iframe.style.border = '0';
+      content.appendChild(iframe);
+    } else {
+      const url = URL.createObjectURL(new Blob([bytes]));
+      content.innerHTML = '';
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.name;
+      a.textContent = 'Download ' + file.name;
+      content.appendChild(a);
+    }
+  }
+
+  async function loadManifest() {
+    const cached = sessionStorage.getItem('manifest-plaintext');
+    if (cached) { try { return JSON.parse(cached); } catch {} }
+
+    let manifestBytes;
+    try {
+      manifestBytes = new Uint8Array(
+        await (await fetch((BASEURL || '') + '/encrypted/manifest.enc')).arrayBuffer()
+      );
+    } catch { return null; }
+
+    const pw = window.prompt('Master password (unlocks the manifest):');
+    if (!pw) return null;
+    try {
+      const { plaintext } = await decryptManifest(pw, manifestBytes);
+      const manifest = JSON.parse(utf8Decode(plaintext));
+      sessionStorage.setItem('manifest-plaintext', JSON.stringify(manifest));
+      return manifest;
+    } catch {
+      alert('Wrong master password.');
+      return null;
+    }
+  }
+
+  function promptForGroupPassword(group) {
+    return new Promise((resolve) => {
+      unlockGroupEl.textContent = group;
+      unlockForm.hidden = false;
+      unlockErrorEl.textContent = '';
+      content.textContent = '';
+      const submit = (e) => {
+        e.preventDefault();
+        const pw = document.getElementById('unlock-pw').value;
+        unlockForm.removeEventListener('submit', submit);
+        resolve(pw);
+      };
+      unlockForm.addEventListener('submit', submit);
     });
-})();
+  }
 </script>
 </body>
 </html>

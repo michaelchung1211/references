@@ -21,10 +21,18 @@ layout: null
 {% assign html_files     = site.static_files | where: "extname", ".html" %}
 {% assign htm_files      = site.static_files | where: "extname", ".htm" %}
 {% assign pdf_files      = site.static_files | where: "extname", ".pdf" %}
-{% assign refs = md_files | concat: markdown_files | concat: html_files | concat: htm_files | concat: pdf_files %}
+{% assign all_refs = md_files | concat: markdown_files | concat: html_files | concat: htm_files | concat: pdf_files %}
+
+{% comment %}Filter out anything under /encrypted/ — those are ciphertext blobs handled by the locked section below.{% endcomment %}
+{% assign refs = "" | split: "" %}
+{% for f in all_refs %}
+  {% unless f.path contains "/encrypted/" %}
+    {% assign refs = refs | push: f %}
+  {% endunless %}
+{% endfor %}
 
 {% if refs.size == 0 %}
-  <p class="empty">No references yet. Create a topic folder (e.g. <code>react/</code>) and drop <code>.md</code>, <code>.html</code>, or <code>.pdf</code> files into it.</p>
+  <p class="empty">No public references yet. Create a topic folder (e.g. <code>react/</code>) and drop <code>.md</code>, <code>.html</code>, or <code>.pdf</code> files into it.</p>
 {% else %}
   {% assign all_topics = "" | split: "" %}
   {% for f in refs %}
@@ -66,6 +74,23 @@ layout: null
     </section>
   {% endfor %}
 {% endif %}
+
+<section id="locked-section">
+  <h2>Locked</h2>
+  <div id="locked-status" class="muted">Checking for encrypted content…</div>
+
+  <form id="locked-form" hidden>
+    <p class="muted">Enter the master password to reveal the list of encrypted folders + files.</p>
+    <label>
+      Master password:
+      <input id="master-pw" type="password" autocomplete="current-password" required>
+    </label>
+    <button type="submit">Unlock</button>
+    <div id="locked-error" class="muted" role="alert"></div>
+  </form>
+
+  <div id="locked-listing" hidden></div>
+</section>
 </main>
 
 <footer>
@@ -73,5 +98,98 @@ layout: null
     <a href="https://github.com/michaelchung1211/references">Github link</a>
   </p>
 </footer>
+
+<script type="module">
+  import {
+    decryptManifest,
+    utf8Decode,
+    b64ToBytes,
+  } from '{{ "/crypto.js" | relative_url }}';
+
+  const BASEURL = {{ site.baseurl | jsonify }};
+  const statusEl = document.getElementById('locked-status');
+  const formEl = document.getElementById('locked-form');
+  const errorEl = document.getElementById('locked-error');
+  const listingEl = document.getElementById('locked-listing');
+  const sectionEl = document.getElementById('locked-section');
+
+  const manifestUrl = (BASEURL || '') + '/encrypted/manifest.enc';
+
+  let manifestBytes = null;
+  try {
+    const res = await fetch(manifestUrl);
+    if (!res.ok) throw new Error(res.status + '');
+    manifestBytes = new Uint8Array(await res.arrayBuffer());
+  } catch (_e) {
+    // No encrypted content yet — hide the whole section.
+    sectionEl.hidden = true;
+    statusEl.remove();
+  }
+
+  if (manifestBytes) {
+    statusEl.remove();
+    formEl.hidden = false;
+
+    // Restore session unlock if available.
+    const cached = sessionStorage.getItem('manifest-plaintext');
+    if (cached) {
+      try { renderManifest(JSON.parse(cached)); formEl.hidden = true; } catch {}
+    }
+
+    formEl.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorEl.textContent = 'Deriving key…';
+      const pw = document.getElementById('master-pw').value;
+      try {
+        const { plaintext } = await decryptManifest(pw, manifestBytes);
+        const manifest = JSON.parse(utf8Decode(plaintext));
+        sessionStorage.setItem('manifest-plaintext', JSON.stringify(manifest));
+        sessionStorage.setItem('manifest-password', pw); // needed to lazily derive group keys
+        renderManifest(manifest);
+        formEl.hidden = true;
+        errorEl.textContent = '';
+      } catch (err) {
+        errorEl.textContent = 'Wrong password (or corrupted manifest).';
+      }
+    });
+  }
+
+  function renderManifest(manifest) {
+    const byGroup = new Map();
+    for (const f of manifest.files) {
+      if (!byGroup.has(f.group)) byGroup.set(f.group, []);
+      byGroup.get(f.group).push(f);
+    }
+    const groups = [...byGroup.keys()].sort();
+    listingEl.hidden = false;
+    listingEl.innerHTML = '';
+    for (const g of groups) {
+      const h = document.createElement('h3');
+      h.textContent = g + ' 🔒';
+      listingEl.appendChild(h);
+      const ul = document.createElement('ul');
+      for (const f of byGroup.get(g).sort((a, b) => a.path.localeCompare(b.path))) {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        const params = new URLSearchParams({
+          blob: f.blob,
+          group: f.group,
+          type: f.type,
+          name: f.name,
+        });
+        a.href = (BASEURL || '') + '/viewer.html?' + params.toString();
+        a.textContent = f.name;
+        li.appendChild(a);
+        const tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.textContent = f.ext || f.type;
+        li.appendChild(document.createTextNode(' '));
+        li.appendChild(tag);
+        ul.appendChild(li);
+      }
+      listingEl.appendChild(ul);
+    }
+  }
+</script>
 </body>
 </html>
