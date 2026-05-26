@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conventional Commits — quick reference</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    max-width: 760px;
+    margin: 2.5rem auto;
+    padding: 0 1.25rem;
+    color: #1d1d1f;
+    background: #fbfbfd;
+    line-height: 1.55;
+  }
+  h1 { letter-spacing: -0.01em; }
+  h2 { margin-top: 2rem; border-bottom: 1px solid #d2d2d7; padding-bottom: 0.35rem; }
+  code { background: #f5f5f7; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.9em; }
+  pre { background: #f5f5f7; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+  table { border-collapse: collapse; margin: 1rem 0; width: 100%; }
+  th, td { border: 1px solid #d2d2d7; padding: 0.5rem 0.75rem; text-align: left; }
+  th { background: #f5f5f7; }
+  .muted { color: #6e6e73; }
+</style>
+</head>
+<body>
+<h1>Conventional Commits</h1>
+<p class="muted">A small spec that makes commit messages machine-readable and easy to scan.</p>
+
+<h2>Shape</h2>
+<pre><code>&lt;type&gt;(&lt;optional scope&gt;): &lt;short summary&gt;
+
+&lt;optional body&gt;
+
+&lt;optional footer(s)&gt;</code></pre>
+
+<h2>Common types</h2>
+<table>
+  <thead>
+    <tr><th>Type</th><th>Meaning</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>feat</code></td><td>A new user-facing feature</td></tr>
+    <tr><td><code>fix</code></td><td>A bug fix</td></tr>
+    <tr><td><code>refactor</code></td><td>Code change that neither fixes a bug nor adds a feature</td></tr>
+    <tr><td><code>perf</code></td><td>Performance improvement</td></tr>
+    <tr><td><code>test</code></td><td>Adding or correcting tests</td></tr>
+    <tr><td><code>docs</code></td><td>Documentation only</td></tr>
+    <tr><td><code>build</code></td><td>Build system, dependencies, tooling</td></tr>
+    <tr><td><code>ci</code></td><td>CI configuration and scripts</td></tr>
+    <tr><td><code>chore</code></td><td>Anything else not user-facing</td></tr>
+  </tbody>
+</table>
+
+<h2>Examples</h2>
+<pre><code>feat(auth): add Google OAuth login
+
+fix(parser): handle trailing commas in JSON5 input
+
+refactor(api): extract pagination into a shared helper
+
+docs: clarify how to enable GitHub Pages</code></pre>
+
+<h2>Breaking changes</h2>
+<p>Append <code>!</code> after the type/scope, or add a <code>BREAKING CHANGE:</code> footer.</p>
+<pre><code>feat(api)!: drop support for v1 endpoints
+
+BREAKING CHANGE: clients must migrate to /v2 before upgrading.</code></pre>
+
+<h2>Why bother</h2>
+<ul>
+  <li>Changelogs can be generated automatically.</li>
+  <li>Semantic version bumps follow naturally (<code>fix</code> → patch, <code>feat</code> → minor, <code>!</code> → major).</li>
+  <li>Git history becomes scannable at a glance.</li>
+</ul>
+
+<p class="muted">Source: <a href="https://www.conventionalcommits.org/">conventionalcommits.org</a></p>
+</body>
+</html>
