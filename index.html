@@ -26,7 +26,7 @@ layout: null
 {% if refs.size == 0 %}
   <p class="empty">No references yet. Create a topic folder (e.g. <code>react/</code>) and drop <code>.md</code>, <code>.html</code>, or <code>.pdf</code> files into it.</p>
 {% else %}
-  {% assign topic_list = "" %}
+  {% assign all_topics = "" | split: "" %}
   {% for f in refs %}
     {% assign clean = f.path | remove_first: "/" %}
     {% assign segments = clean | split: "/" %}
@@ -35,13 +35,9 @@ layout: null
     {% else %}
       {% assign t = "(root)" %}
     {% endif %}
-    {% assign needle = "||" | append: t | append: "||" %}
-    {% assign haystack = "||" | append: topic_list | append: "||" %}
-    {% unless haystack contains needle %}
-      {% assign topic_list = topic_list | append: t | append: "|" %}
-    {% endunless %}
+    {% assign all_topics = all_topics | push: t %}
   {% endfor %}
-  {% assign topics = topic_list | split: "|" | sort %}
+  {% assign topics = all_topics | uniq | sort %}
 
   {% for topic in topics %}
     {% if topic == "" %}{% continue %}{% endif %}
