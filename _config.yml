@@ -1,7 +1,7 @@
 title: References
 description: A personal collection of references — Markdown, HTML, and PDF.
-baseurl: "/references"
-url: "https://michaelchung1211.github.io"
+baseurl: ""
+url: "https://ref.ezcoder.ink"
 
 markdown: kramdown
 plugins: []

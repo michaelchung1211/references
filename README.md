@@ -2,7 +2,7 @@
 
 A static site for my collection of references (Markdown, HTML, PDF), hosted on GitHub Pages.
 
-Live: <https://michaelchung1211.github.io/references/>
+Live: <https://ref.ezcoder.ink>
 
 ## Adding files
 
@@ -28,7 +28,7 @@ bundle install
 bundle exec jekyll serve
 ```
 
-Then open <http://localhost:4000/references/>.
+Then open <http://localhost:4000/>.
 
 ## How it works
 
