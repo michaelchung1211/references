@@ -16,6 +16,11 @@ layout: null
 </header>
 
 <main>
+{% comment %}
+  ---- Plaintext topic folders (existing behavior, e.g. git/, companion/) ----
+  These are files committed directly under topic folders at the project root.
+  /encrypted/* is filtered out — those are handled by the manifest-driven UI below.
+{% endcomment %}
 {% assign md_files       = site.static_files | where: "extname", ".md" %}
 {% assign markdown_files = site.static_files | where: "extname", ".markdown" %}
 {% assign html_files     = site.static_files | where: "extname", ".html" %}
@@ -23,7 +28,6 @@ layout: null
 {% assign pdf_files      = site.static_files | where: "extname", ".pdf" %}
 {% assign all_refs = md_files | concat: markdown_files | concat: html_files | concat: htm_files | concat: pdf_files %}
 
-{% comment %}Filter out anything under /encrypted/ — those are ciphertext blobs handled by the locked section below.{% endcomment %}
 {% assign refs = "" | split: "" %}
 {% for f in all_refs %}
   {% unless f.path contains "/encrypted/" %}
@@ -31,9 +35,7 @@ layout: null
   {% endunless %}
 {% endfor %}
 
-{% if refs.size == 0 %}
-  <p class="empty">No public references yet. Create a topic folder (e.g. <code>react/</code>) and drop <code>.md</code>, <code>.html</code>, or <code>.pdf</code> files into it.</p>
-{% else %}
+{% if refs.size > 0 %}
   {% assign all_topics = "" | split: "" %}
   {% for f in refs %}
     {% assign clean = f.path | remove_first: "/" %}
@@ -75,119 +77,145 @@ layout: null
   {% endfor %}
 {% endif %}
 
-<section id="locked-section">
-  <h2>Locked</h2>
-  <div id="locked-status" class="muted">Checking for encrypted content…</div>
-
-  <form id="locked-form" hidden>
-    <p class="muted">Enter the master password to reveal the list of encrypted folders + files.</p>
-    <label>
-      Master password:
-      <input id="master-pw" type="password" autocomplete="current-password" required>
-    </label>
-    <button type="submit">Unlock</button>
-    <div id="locked-error" class="muted" role="alert"></div>
-  </form>
-
-  <div id="locked-listing" hidden></div>
-</section>
+<div id="manifest-root"></div>
 </main>
 
 <footer>
   <p class="muted">
     <a href="https://github.com/michaelchung1211/references">Github link</a>
+    &nbsp;·&nbsp;
+    <a href="{{ '/encryption.html' | relative_url }}">How encryption works</a>
   </p>
 </footer>
 
 <script type="module">
-  import {
-    decryptManifest,
-    utf8Decode,
-    b64ToBytes,
-  } from '{{ "/crypto.js" | relative_url }}';
+  import { deriveKey, decryptBlob, utf8Decode, b64ToBytes } from '{{ "/crypto.js" | relative_url }}';
 
   const BASEURL = {{ site.baseurl | jsonify }};
-  const statusEl = document.getElementById('locked-status');
-  const formEl = document.getElementById('locked-form');
-  const errorEl = document.getElementById('locked-error');
-  const listingEl = document.getElementById('locked-listing');
-  const sectionEl = document.getElementById('locked-section');
+  const root = document.getElementById('manifest-root');
 
-  const manifestUrl = (BASEURL || '') + '/encrypted/manifest.enc';
-
-  let manifestBytes = null;
+  let manifest = null;
   try {
-    const res = await fetch(manifestUrl);
-    if (!res.ok) throw new Error(res.status + '');
-    manifestBytes = new Uint8Array(await res.arrayBuffer());
-  } catch (_e) {
-    // No encrypted content yet — hide the whole section.
-    sectionEl.hidden = true;
-    statusEl.remove();
-  }
+    const res = await fetch((BASEURL || '') + '/encrypted/manifest.json');
+    if (res.ok) manifest = await res.json();
+  } catch (_e) { /* no src/ content yet — nothing to show */ }
 
-  if (manifestBytes) {
-    statusEl.remove();
-    formEl.hidden = false;
+  for (const project of (manifest?.projects ?? [])) {
+    const section = document.createElement('section');
+    const h2 = document.createElement('h2');
+    h2.textContent = project.private ? `${project.name} 🔒` : project.name;
+    section.appendChild(h2);
 
-    // Restore session unlock if available.
-    const cached = sessionStorage.getItem('manifest-plaintext');
-    if (cached) {
-      try { renderManifest(JSON.parse(cached)); formEl.hidden = true; } catch {}
-    }
-
-    formEl.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      errorEl.textContent = 'Deriving key…';
-      const pw = document.getElementById('master-pw').value;
-      try {
-        const { plaintext } = await decryptManifest(pw, manifestBytes);
-        const manifest = JSON.parse(utf8Decode(plaintext));
-        sessionStorage.setItem('manifest-plaintext', JSON.stringify(manifest));
-        sessionStorage.setItem('manifest-password', pw); // needed to lazily derive group keys
-        renderManifest(manifest);
-        formEl.hidden = true;
-        errorEl.textContent = '';
-      } catch (err) {
-        errorEl.textContent = 'Wrong password (or corrupted manifest).';
-      }
-    });
-  }
-
-  function renderManifest(manifest) {
-    const byGroup = new Map();
-    for (const f of manifest.files) {
-      if (!byGroup.has(f.group)) byGroup.set(f.group, []);
-      byGroup.get(f.group).push(f);
-    }
-    const groups = [...byGroup.keys()].sort();
-    listingEl.hidden = false;
-    listingEl.innerHTML = '';
-    for (const g of groups) {
-      const h = document.createElement('h3');
-      h.textContent = g + ' 🔒';
-      listingEl.appendChild(h);
+    if (!project.private) {
       const ul = document.createElement('ul');
-      for (const f of byGroup.get(g).sort((a, b) => a.path.localeCompare(b.path))) {
+      for (const f of project.files) {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        if (f.type === 'md') {
+          a.href = (BASEURL || '') + '/viewer.html?path=' + encodeURIComponent('/encrypted/' + f.publicHref);
+        } else {
+          a.href = (BASEURL || '') + '/encrypted/' + f.publicHref;
+        }
+        a.textContent = f.name;
+        const tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.textContent = f.ext || f.type;
+        li.appendChild(a);
+        li.appendChild(document.createTextNode(' '));
+        li.appendChild(tag);
+        ul.appendChild(li);
+      }
+      section.appendChild(ul);
+      root.appendChild(section);
+      continue;
+    }
+
+    // Private project: render password form + (initially hidden) file list.
+    const desc = document.createElement('p');
+    desc.className = 'muted';
+    desc.textContent = `${project.files.length} encrypted file(s). Enter the password for "${project.name}" to unlock.`;
+    section.appendChild(desc);
+
+    const form = document.createElement('form');
+    const label = document.createElement('label');
+    label.textContent = 'Password: ';
+    const input = document.createElement('input');
+    input.type = 'password';
+    input.autocomplete = 'current-password';
+    input.required = true;
+    label.appendChild(input);
+    form.appendChild(label);
+    const btn = document.createElement('button');
+    btn.type = 'submit';
+    btn.textContent = 'Unlock';
+    form.appendChild(document.createTextNode(' '));
+    form.appendChild(btn);
+    const err = document.createElement('div');
+    err.className = 'muted';
+    err.setAttribute('role', 'alert');
+    form.appendChild(err);
+    section.appendChild(form);
+
+    const fileList = document.createElement('ul');
+    fileList.hidden = true;
+    section.appendChild(fileList);
+    root.appendChild(section);
+
+    // Restore from session if we already unlocked this project this tab.
+    const cachedPw = sessionStorage.getItem('proj-pw:' + project.name);
+    if (cachedPw) {
+      tryUnlock(cachedPw, /*silent*/ true);
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await tryUnlock(input.value, false);
+    });
+
+    async function tryUnlock(pw, silent) {
+      err.textContent = silent ? '' : 'Deriving key…';
+      try {
+        const salt = b64ToBytes(project.salt);
+        const key = await deriveKey(pw, salt);
+        // Verify by trying to decrypt the first file's header.
+        const first = project.files[0];
+        const blobBytes = new Uint8Array(
+          await (await fetch((BASEURL || '') + '/encrypted/' + first.blob)).arrayBuffer()
+        );
+        await decryptBlob(key, blobBytes); // throws on wrong password
+        sessionStorage.setItem('proj-pw:' + project.name, pw);
+        form.hidden = true;
+        desc.hidden = true;
+        err.textContent = '';
+        renderFiles();
+      } catch (_e) {
+        if (!silent) err.textContent = 'Wrong password — try again.';
+        sessionStorage.removeItem('proj-pw:' + project.name);
+      }
+    }
+
+    function renderFiles() {
+      fileList.hidden = false;
+      fileList.innerHTML = '';
+      for (const f of project.files) {
         const li = document.createElement('li');
         const a = document.createElement('a');
         const params = new URLSearchParams({
           blob: f.blob,
-          group: f.group,
+          project: project.name,
           type: f.type,
           name: f.name,
         });
         a.href = (BASEURL || '') + '/viewer.html?' + params.toString();
         a.textContent = f.name;
-        li.appendChild(a);
         const tag = document.createElement('span');
         tag.className = 'tag';
         tag.textContent = f.ext || f.type;
+        li.appendChild(a);
         li.appendChild(document.createTextNode(' '));
         li.appendChild(tag);
-        ul.appendChild(li);
+        fileList.appendChild(li);
       }
-      listingEl.appendChild(ul);
     }
   }
 </script>

@@ -19,7 +19,7 @@ layout: null
 <main id="content" class="markdown-body">Loading&hellip;</main>
 
 <form id="unlock-form" hidden>
-  <p class="muted">This file is encrypted. Enter the password for group <strong id="unlock-group"></strong>.</p>
+  <p class="muted">This file is encrypted. Enter the password for project <strong id="unlock-project"></strong>.</p>
   <label>
     Password:
     <input id="unlock-pw" type="password" autocomplete="current-password" required>
@@ -30,7 +30,6 @@ layout: null
 
 <script type="module">
   import {
-    decryptManifest,
     decryptBlob,
     deriveKey,
     utf8Decode,
@@ -42,14 +41,14 @@ layout: null
   const content = document.getElementById('content');
   const titleEl = document.getElementById('title');
   const unlockForm = document.getElementById('unlock-form');
-  const unlockGroupEl = document.getElementById('unlock-group');
+  const unlockProjectEl = document.getElementById('unlock-project');
   const unlockErrorEl = document.getElementById('unlock-error');
 
   const encBlob = params.get('blob');
   const plainPath = params.get('path');
 
   if (encBlob) {
-    await renderEncrypted(encBlob, params.get('group'), params.get('type'), params.get('name'));
+    await renderEncrypted(encBlob, params.get('project'), params.get('type'), params.get('name'));
   } else if (plainPath) {
     await renderPlain(plainPath);
   } else {
@@ -78,42 +77,42 @@ layout: null
   }
 
   // ---------- encrypted path ----------
-  async function renderEncrypted(blobName, group, type, name) {
+  async function renderEncrypted(blobName, projectName, type, name) {
     document.title = name || 'Encrypted';
     titleEl.textContent = name || 'Encrypted file';
 
     const manifest = await loadManifest();
     if (!manifest) {
-      content.textContent = 'Manifest is locked. Go back to the index and unlock first.';
+      content.textContent = 'Could not load manifest.';
       return;
     }
-    const file = manifest.files.find((f) => f.blob === blobName && f.group === group);
+    const project = manifest.projects.find((p) => p.name === projectName);
+    if (!project || !project.private) {
+      content.textContent = 'Project not found in manifest, or not private.';
+      return;
+    }
+    const file = project.files.find((f) => f.blob === blobName);
     if (!file) {
       content.textContent = 'File not found in manifest.';
-      return;
-    }
-    const groupMeta = manifest.groups[group];
-    if (!groupMeta) {
-      content.textContent = 'Group not found in manifest.';
       return;
     }
 
     let blobBytes;
     try {
       blobBytes = new Uint8Array(
-        await (await fetch((BASEURL || '') + '/encrypted/blobs/' + blobName)).arrayBuffer()
+        await (await fetch((BASEURL || '') + '/encrypted/' + blobName)).arrayBuffer()
       );
     } catch (e) {
       content.textContent = 'Failed to fetch blob: ' + e.message;
       return;
     }
 
-    const salt = b64ToBytes(groupMeta.salt);
-    const sessionKey = 'group-pw:' + group;
+    const salt = b64ToBytes(project.salt);
+    const sessionKey = 'proj-pw:' + project.name;
     let cachedPw = sessionStorage.getItem(sessionKey);
 
     while (true) {
-      let pw = cachedPw || (await promptForGroupPassword(group));
+      let pw = cachedPw || (await promptForProjectPassword(project.name));
       if (!pw) { content.textContent = 'Cancelled.'; return; }
       content.textContent = 'Decrypting…';
       try {
@@ -165,32 +164,16 @@ layout: null
   }
 
   async function loadManifest() {
-    const cached = sessionStorage.getItem('manifest-plaintext');
-    if (cached) { try { return JSON.parse(cached); } catch {} }
-
-    let manifestBytes;
     try {
-      manifestBytes = new Uint8Array(
-        await (await fetch((BASEURL || '') + '/encrypted/manifest.enc')).arrayBuffer()
-      );
+      const res = await fetch((BASEURL || '') + '/encrypted/manifest.json');
+      if (!res.ok) throw new Error(res.status + '');
+      return await res.json();
     } catch { return null; }
-
-    const pw = window.prompt('Master password (unlocks the manifest):');
-    if (!pw) return null;
-    try {
-      const { plaintext } = await decryptManifest(pw, manifestBytes);
-      const manifest = JSON.parse(utf8Decode(plaintext));
-      sessionStorage.setItem('manifest-plaintext', JSON.stringify(manifest));
-      return manifest;
-    } catch {
-      alert('Wrong master password.');
-      return null;
-    }
   }
 
-  function promptForGroupPassword(group) {
+  function promptForProjectPassword(project) {
     return new Promise((resolve) => {
-      unlockGroupEl.textContent = group;
+      unlockProjectEl.textContent = project;
       unlockForm.hidden = false;
       unlockErrorEl.textContent = '';
       content.textContent = '';

@@ -1,16 +1,19 @@
 #!/usr/bin/env node
-// Build-time CLI: reads _plaintext/, writes encrypted/ (manifest + blobs).
+// Build CLI: reads src/, writes encrypted/.
 //
-// Usage:
-//   node tools/encrypt.mjs
+// Layout of src/:
+//   src/<project>/<...>/<file>.{md,html,pdf,...}
 //
-// Layout of _plaintext/:
-//   _plaintext/<group>/<...>/<file>.{md,html,pdf,...}
+// Each top-level subfolder under src/ is a "project". Per project, you set
+// either a password (→ files are AES-GCM encrypted with an Argon2id-derived
+// key) or no password (→ files are copied to encrypted/<project>/ as plain
+// bytes, served on GitHub as plaintext).
 //
-// Each top-level folder under _plaintext/ is one "group". You'll be prompted
-// for one password per group, plus a master password for the manifest.
+// The manifest at encrypted/manifest.json is PLAINTEXT — it just lists every
+// project, whether it's private, and (for private ones) the per-project salt.
+// Passwords never leave your laptop.
 
-import { readdir, readFile, writeFile, mkdir, stat } from 'node:fs/promises';
+import { readdir, readFile, writeFile, mkdir, rm, stat, copyFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
@@ -19,40 +22,20 @@ import { webcrypto as crypto } from 'node:crypto';
 import { argon2id } from 'hash-wasm';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-const PLAIN_DIR = path.join(ROOT, '_plaintext');
-const ENC_DIR = path.join(ROOT, 'encrypted');
-const BLOBS_DIR = path.join(ENC_DIR, 'blobs');
+const SRC_DIR = path.join(ROOT, 'src');
+const OUT_DIR = path.join(ROOT, 'encrypted');
+const MANIFEST_PATH = path.join(OUT_DIR, 'manifest.json');
 
 const VERSION = 0x01;
 const ARGON2 = { memorySize: 65536, iterations: 3, parallelism: 1, hashLength: 32 };
 
-// ---------- file-format helpers (mirror of crypto.js) ----------
+// ---------- crypto helpers ----------
 
-function randomBytes(n) {
-  return crypto.getRandomValues(new Uint8Array(n));
-}
+function randomBytes(n) { return crypto.getRandomValues(new Uint8Array(n)); }
 
 async function deriveKey(password, salt) {
-  const raw = await argon2id({
-    password,
-    salt,
-    ...ARGON2,
-    outputType: 'binary',
-  });
+  const raw = await argon2id({ password, salt, ...ARGON2, outputType: 'binary' });
   return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
-}
-
-async function encryptManifest(password, plaintext) {
-  const salt = randomBytes(16);
-  const iv = randomBytes(12);
-  const key = await deriveKey(password, salt);
-  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext));
-  const out = new Uint8Array(1 + 16 + 12 + ct.byteLength);
-  out[0] = VERSION;
-  out.set(salt, 1);
-  out.set(iv, 17);
-  out.set(ct, 29);
-  return out;
 }
 
 async function encryptBlob(key, plaintext) {
@@ -65,16 +48,31 @@ async function encryptBlob(key, plaintext) {
   return out;
 }
 
+async function sha256Hex(bytes) {
+  const h = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 // ---------- prompt helpers ----------
 
+let pipedLines = null;
+async function loadPipedInput() {
+  const chunks = [];
+  for await (const c of process.stdin) chunks.push(c);
+  pipedLines = Buffer.concat(chunks).toString('utf8').split('\n');
+}
+
 function ask(question, { hidden = false } = {}) {
+  if (!process.stdin.isTTY) {
+    process.stdout.write(question);
+    const line = pipedLines.shift() ?? '';
+    process.stdout.write(hidden ? '\n' : line + '\n');
+    return Promise.resolve(line);
+  }
   return new Promise((resolve) => {
     let muted = false;
     const mutableStdout = new Writable({
-      write(chunk, encoding, cb) {
-        if (!muted) process.stdout.write(chunk, encoding);
-        cb();
-      },
+      write(chunk, enc, cb) { if (!muted) process.stdout.write(chunk, enc); cb(); },
     });
     const rl = readline.createInterface({ input: process.stdin, output: mutableStdout, terminal: true });
     rl.question(question, (answer) => {
@@ -88,16 +86,14 @@ function ask(question, { hidden = false } = {}) {
 
 async function askPassword(label) {
   while (true) {
-    const a = await ask(`  ${label}: `, { hidden: true });
+    const a = await ask(`  password for "${label}" (empty = public): `, { hidden: true });
+    if (a === '') return null; // public
     if (a.length < 8) {
-      console.log('  Password must be at least 8 characters. Try again.');
+      console.log('  Password must be at least 8 characters (or empty for public). Try again.');
       continue;
     }
-    const b = await ask(`  ${label} (confirm): `, { hidden: true });
-    if (a !== b) {
-      console.log('  Passwords did not match. Try again.');
-      continue;
-    }
+    const b = await ask(`  confirm: `, { hidden: true });
+    if (a !== b) { console.log('  Did not match. Try again.'); continue; }
     return a;
   }
 }
@@ -106,8 +102,7 @@ async function askPassword(label) {
 
 async function* walk(dir) {
   let entries;
-  try { entries = await readdir(dir, { withFileTypes: true }); }
-  catch { return; }
+  try { entries = await readdir(dir, { withFileTypes: true }); } catch { return; }
   for (const e of entries) {
     if (e.name.startsWith('.')) continue;
     const full = path.join(dir, e.name);
@@ -124,115 +119,174 @@ function extType(ext) {
   return e || 'bin';
 }
 
-async function sha256Hex(bytes) {
-  const h = await crypto.subtle.digest('SHA-256', bytes);
-  return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('');
+async function loadPreviousManifest() {
+  if (!existsSync(MANIFEST_PATH)) return null;
+  try {
+    const text = await readFile(MANIFEST_PATH, 'utf8');
+    return JSON.parse(text);
+  } catch { return null; }
+}
+
+async function rmrf(dir) {
+  if (!existsSync(dir)) return;
+  await rm(dir, { recursive: true, force: true });
 }
 
 // ---------- main ----------
 
 async function main() {
-  if (!existsSync(PLAIN_DIR)) {
-    console.error(`No _plaintext/ directory found at ${PLAIN_DIR}.`);
-    console.error('Create it and drop files into per-group subfolders, e.g. _plaintext/work/notes.md');
+  if (!process.stdin.isTTY) await loadPipedInput();
+
+  if (!existsSync(SRC_DIR)) {
+    console.error(`No src/ directory found at ${SRC_DIR}.`);
+    console.error('Create it and drop files into per-project subfolders, e.g. src/work/notes.md');
     process.exit(1);
   }
 
-  // 1. Gather files, grouped by top-level subfolder.
-  const groups = new Map(); // group -> [{ absPath, relPath }]
-  for await (const abs of walk(PLAIN_DIR)) {
-    const rel = path.relative(PLAIN_DIR, abs).split(path.sep).join('/');
+  // 1. Gather files, grouped by top-level project name.
+  const projects = new Map(); // name -> [{ absPath, relPath }]
+  for await (const abs of walk(SRC_DIR)) {
+    const rel = path.relative(SRC_DIR, abs).split(path.sep).join('/');
     const segs = rel.split('/');
     if (segs.length < 2) {
-      console.warn(`Skipping ${rel} — files must live under a group folder, e.g. _plaintext/<group>/${rel}`);
+      console.warn(`Skipping ${rel} — files must live under a project folder, e.g. src/<project>/${rel}`);
       continue;
     }
-    const group = segs[0];
-    if (!groups.has(group)) groups.set(group, []);
-    groups.get(group).push({ absPath: abs, relPath: rel });
+    const p = segs[0];
+    if (!projects.has(p)) projects.set(p, []);
+    projects.get(p).push({ absPath: abs, relPath: rel });
   }
 
-  if (groups.size === 0) {
-    console.error('No files found under _plaintext/. Add files to per-group folders first.');
+  if (projects.size === 0) {
+    console.error('No files found under src/. Add files to per-project folders first.');
     process.exit(1);
   }
 
-  console.log(`Found ${[...groups.values()].reduce((n, a) => n + a.length, 0)} file(s) across ${groups.size} group(s):`);
-  for (const [g, files] of groups) console.log(`  - ${g}: ${files.length} file(s)`);
+  console.log(`Found ${[...projects.values()].reduce((n, a) => n + a.length, 0)} file(s) across ${projects.size} project(s):`);
+  for (const [p, files] of projects) console.log(`  - ${p}: ${files.length} file(s)`);
   console.log('');
 
-  // 2. Prompt for passwords.
-  console.log('Master password (unlocks the manifest = list of folders/filenames):');
-  const masterPw = await askPassword('master');
-  console.log('');
+  // 2. Look at the previous manifest to know which projects were private/public.
+  const prev = await loadPreviousManifest();
+  const prevByName = new Map();
+  if (prev && Array.isArray(prev.projects)) {
+    for (const p of prev.projects) prevByName.set(p.name, p);
+  }
 
-  const groupPasswords = new Map();
-  for (const g of groups.keys()) {
-    console.log(`Group "${g}":`);
-    groupPasswords.set(g, await askPassword(g));
+  // 3. Decide per-project: public or private + password.
+  const projectMeta = new Map(); // name -> { private, password?, salt? }
+  for (const name of projects.keys()) {
+    const prior = prevByName.get(name);
+    if (prior && prior.private === false) {
+      console.log(`Project "${name}": public (carried over from previous build)`);
+      projectMeta.set(name, { private: false });
+      continue;
+    }
+    if (prior && prior.private === true) {
+      console.log(`Project "${name}": private. Enter the password to re-encrypt:`);
+      let pw;
+      while (true) {
+        pw = await ask(`  password: `, { hidden: true });
+        if (pw.length >= 8) break;
+        console.log('  Password must be at least 8 characters.');
+      }
+      projectMeta.set(name, { private: true, password: pw, salt: Buffer.from(prior.salt, 'base64') });
+      continue;
+    }
+    // New project — ask whether to set a password.
+    console.log(`Project "${name}" is new.`);
+    const pw = await askPassword(name);
+    if (pw === null) {
+      projectMeta.set(name, { private: false });
+    } else {
+      projectMeta.set(name, { private: true, password: pw, salt: randomBytes(16) });
+    }
     console.log('');
   }
 
-  // 3. Derive group salts + keys.
-  await mkdir(BLOBS_DIR, { recursive: true });
+  // 4. Clear out previous output for projects we're rebuilding, then write fresh.
+  for (const name of projects.keys()) {
+    await rmrf(path.join(OUT_DIR, name));
+  }
+  await mkdir(OUT_DIR, { recursive: true });
+
   const manifest = {
-    version: 1,
+    version: 2,
     kdf: { name: 'argon2id', ...ARGON2 },
-    groups: {},
-    files: [],
+    projects: [],
   };
 
-  for (const [g, files] of groups) {
-    const salt = randomBytes(16);
-    const key = await deriveKey(groupPasswords.get(g), salt);
-    manifest.groups[g] = { salt: Buffer.from(salt).toString('base64') };
+  for (const [name, files] of projects) {
+    const meta = projectMeta.get(name);
+    const outProjDir = path.join(OUT_DIR, name);
+    await mkdir(outProjDir, { recursive: true });
 
-    for (const { absPath, relPath } of files) {
-      const data = new Uint8Array(await readFile(absPath));
-      const enc = await encryptBlob(key, data);
-      const blobName = (await sha256Hex(enc)).slice(0, 32) + '.enc';
-      await writeFile(path.join(BLOBS_DIR, blobName), enc);
+    const projectEntry = { name, private: meta.private, files: [] };
 
-      const ext = path.extname(relPath);
-      manifest.files.push({
-        path: relPath,
-        name: path.basename(relPath),
-        blob: blobName,
-        group: g,
-        type: extType(ext),
-        ext: ext.replace(/^\./, '').toLowerCase(),
-        size: data.byteLength,
-      });
-      console.log(`  + ${relPath}  ->  blobs/${blobName}`);
+    if (meta.private) {
+      const salt = meta.salt instanceof Uint8Array ? meta.salt : new Uint8Array(meta.salt);
+      const key = await deriveKey(meta.password, salt);
+      projectEntry.salt = Buffer.from(salt).toString('base64');
+
+      for (const { absPath, relPath } of files) {
+        const data = new Uint8Array(await readFile(absPath));
+        const enc = await encryptBlob(key, data);
+        const blobName = (await sha256Hex(enc)).slice(0, 32) + '.enc';
+        await writeFile(path.join(outProjDir, blobName), enc);
+        const ext = path.extname(relPath);
+        projectEntry.files.push({
+          path: relPath,
+          name: path.basename(relPath),
+          blob: `${name}/${blobName}`,
+          type: extType(ext),
+          ext: ext.replace(/^\./, '').toLowerCase(),
+          size: data.byteLength,
+        });
+        console.log(`  🔒 ${relPath} -> encrypted/${name}/${blobName}`);
+      }
+    } else {
+      // Public: copy bytes verbatim.
+      for (const { absPath, relPath } of files) {
+        const data = await readFile(absPath);
+        const subPath = relPath.split('/').slice(1).join('/'); // strip project name
+        const destDir = path.dirname(path.join(outProjDir, subPath));
+        await mkdir(destDir, { recursive: true });
+        await writeFile(path.join(outProjDir, subPath), data);
+        const ext = path.extname(relPath);
+        projectEntry.files.push({
+          path: relPath,
+          name: path.basename(relPath),
+          publicHref: `${name}/${subPath}`,
+          type: extType(ext),
+          ext: ext.replace(/^\./, '').toLowerCase(),
+          size: data.byteLength,
+        });
+        console.log(`  📄 ${relPath} -> encrypted/${name}/${subPath}`);
+      }
     }
+
+    projectEntry.files.sort((a, b) => a.path.localeCompare(b.path));
+    manifest.projects.push(projectEntry);
   }
 
-  manifest.files.sort((a, b) => a.path.localeCompare(b.path));
+  manifest.projects.sort((a, b) => a.name.localeCompare(b.name));
 
-  // 4. Encrypt manifest with master password.
-  const manifestBytes = new TextEncoder().encode(JSON.stringify(manifest));
-  const manifestEnc = await encryptManifest(masterPw, manifestBytes);
-  await writeFile(path.join(ENC_DIR, 'manifest.enc'), manifestEnc);
-  console.log(`\nWrote encrypted/manifest.enc (${manifestEnc.byteLength} bytes)`);
+  await writeFile(MANIFEST_PATH, JSON.stringify(manifest, null, 2) + '\n');
+  console.log(`\nWrote encrypted/manifest.json (${manifest.projects.length} project(s)).`);
 
-  // 5. Clean up orphaned blobs from previous builds.
-  const liveBlobs = new Set(manifest.files.map((f) => f.blob));
-  const existing = await readdir(BLOBS_DIR);
-  let removed = 0;
-  for (const name of existing) {
-    if (!name.endsWith('.enc')) continue;
-    if (!liveBlobs.has(name)) {
-      const { rm } = await import('node:fs/promises');
-      await rm(path.join(BLOBS_DIR, name));
-      removed++;
+  // 5. Garbage-collect projects that no longer exist in src/.
+  if (existsSync(OUT_DIR)) {
+    const entries = await readdir(OUT_DIR, { withFileTypes: true });
+    for (const e of entries) {
+      if (!e.isDirectory()) continue;
+      if (!projects.has(e.name)) {
+        await rmrf(path.join(OUT_DIR, e.name));
+        console.log(`  removed stale project: encrypted/${e.name}/`);
+      }
     }
   }
-  if (removed) console.log(`Removed ${removed} orphan blob(s).`);
 
   console.log('\nDone. Review the diff, then commit + push.');
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+main().catch((e) => { console.error(e); process.exit(1); });

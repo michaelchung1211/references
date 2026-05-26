@@ -40,52 +40,60 @@ Then open <http://localhost:4000/>.
 
 PDFs and HTML files link directly (the browser handles them). Markdown is routed through the viewer.
 
-## Encrypted references
+## src/ workflow (per-project, optional encryption)
 
-Anything sensitive can be encrypted before being committed. Ciphertext lives in `encrypted/` and is served by GitHub Pages; the password lives only in your head. Decryption happens entirely in the browser via Web Crypto (AES-256-GCM) with Argon2id key derivation.
+`src/` is the staging area for content the build CLI publishes to the site. Each top-level folder under `src/` is a **project** with its own decision: set a password (→ encrypted on GitHub) or leave it empty (→ plaintext on GitHub).
+
+```
+src/                       # gitignored, your plaintext source
+├── work/                  # password → AES-256-GCM ciphertext on github
+│   └── salary.md
+├── personal/              # password → AES-256-GCM ciphertext on github
+│   └── diary.md
+└── public-notes/          # no password → plain bytes on github
+    └── getting-started.md
+```
+
+After running the CLI, the committed output looks like:
+
+```
+encrypted/
+├── manifest.json          # plaintext: lists every project + per-project salts
+├── personal/<hash>.enc    # encrypted
+├── work/<hash>.enc        # encrypted
+└── public-notes/getting-started.md   # plain bytes
+```
+
+### One-time setup
+
+```sh
+npm install                # installs hash-wasm for Argon2id
+```
+
+### Adding / updating content
+
+1. Drop or edit files under `src/<project>/`.
+2. Run `npm run encrypt`.
+   - **New project**: you're asked for a password. **Press Enter to make it public** (no encryption).
+   - **Existing private project**: you're asked for the current password to re-encrypt.
+   - **Existing public project**: no prompt; files are copied as-is.
+3. Commit `encrypted/` and push.
+
+### Reading content
+
+- **Public projects**: links work straight from the index.
+- **Private projects**: the index shows the project with a 🔒. Type the project's password → file list appears → click a file to read.
+- Passwords are cached in the tab's `sessionStorage` only. Closing the tab clears them.
 
 ### Threat model
 
-- ✅ Protects the contents against anyone who clones the repo or hits the public URL without the password.
-- ✅ Argon2id (m=64MB, t=3, p=1) makes offline brute-force expensive.
-- ❌ Cannot hide that *some* encrypted content exists, the number of files, or their approximate sizes.
-- ❌ Cannot help if your password is weak, leaked, or your device is compromised.
+- ✅ Without a password, a private project is just ciphertext on a public URL.
+- ✅ Argon2id (m=64 MB, t=3, p=1) makes offline brute-force expensive.
+- ❌ Cannot hide that *some* encrypted content exists, the number of files, project names, or approximate sizes.
+- ❌ Cannot help if your password is weak / leaked / your device is compromised.
 
-### Adding an encrypted file
+### Rotating a password / changing privacy
 
-1. Drop it into `_plaintext/<group>/...`. The top-level folder is the "group" — every file in the same group shares one password.
-   ```
-   _plaintext/
-     work/
-       salary-notes.md
-       offer.pdf
-     personal/
-       diary.md
-   ```
-   `_plaintext/` is gitignored — it never leaves your machine.
-
-2. Install the CLI's one dependency (once):
-   ```sh
-   npm install
-   ```
-
-3. Run the encryptor:
-   ```sh
-   npm run encrypt
-   ```
-   You'll be prompted for:
-   - A **master password** (unlocks the manifest = list of folders + filenames).
-   - One **password per group** (unlocks the files in that group).
-
-4. It writes `encrypted/manifest.enc` + `encrypted/blobs/<hash>.enc`. Commit + push as usual.
-
-### Reading encrypted files
-
-1. Visit the site.
-2. Scroll to the "Locked" section, enter the master password to reveal the file list.
-3. Click a file. The viewer prompts for that file's group password and decrypts in-browser.
-4. Passwords are cached in `sessionStorage` for the current tab only — close the tab and they're gone.
-
-### Rotating a password
-
-Delete `encrypted/` and re-run `npm run encrypt`. You'll be prompted for the new passwords, and all files are re-encrypted.
+- **Rotate**: delete the project's folder from `encrypted/` and re-run `npm run encrypt`. You'll be prompted for the new password.
+- **Make public**: edit `encrypted/manifest.json`, set `"private": false`, delete the `.enc` blobs, re-run. (Or just delete the project entry entirely and re-run.)
+- **Make private**: delete that project's entry from `encrypted/manifest.json` and re-run; you'll be prompted to set a password.

@@ -1,0 +1,72 @@
+{
+  "version": 2,
+  "kdf": {
+    "name": "argon2id",
+    "memorySize": 65536,
+    "iterations": 3,
+    "parallelism": 1,
+    "hashLength": 32
+  },
+  "projects": [
+    {
+      "name": "personal",
+      "private": true,
+      "files": [
+        {
+          "path": "personal/diary.md",
+          "name": "diary.md",
+          "blob": "personal/4a1b16a2b865f74b4db570f0cf484a92.enc",
+          "type": "md",
+          "ext": "md",
+          "size": 357
+        },
+        {
+          "path": "personal/passwords-cheatsheet.md",
+          "name": "passwords-cheatsheet.md",
+          "blob": "personal/7d4de6cc029b59dc80a27682d15eff10.enc",
+          "type": "md",
+          "ext": "md",
+          "size": 350
+        }
+      ],
+      "salt": "LzA5XrqFxC95kUxz4j6gTQ=="
+    },
+    {
+      "name": "public-notes",
+      "private": false,
+      "files": [
+        {
+          "path": "public-notes/getting-started.md",
+          "name": "getting-started.md",
+          "publicHref": "public-notes/getting-started.md",
+          "type": "md",
+          "ext": "md",
+          "size": 698
+        }
+      ]
+    },
+    {
+      "name": "work",
+      "private": true,
+      "files": [
+        {
+          "path": "work/offer-letter.md",
+          "name": "offer-letter.md",
+          "blob": "work/57c98a8009ec0c1dcce0dbd8bbed2550.enc",
+          "type": "md",
+          "ext": "md",
+          "size": 344
+        },
+        {
+          "path": "work/salary-notes.md",
+          "name": "salary-notes.md",
+          "blob": "work/7142de7e2311651da4c71bcaebaa37ba.enc",
+          "type": "md",
+          "ext": "md",
+          "size": 330
+        }
+      ],
+      "salt": "3K4cNTotSf4fYEUt1HADHQ=="
+    }
+  ]
+}

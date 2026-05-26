@@ -8,7 +8,7 @@ Gemfile.lock
 node_modules/
 package-lock.json
 
-# Plaintext source for encrypted content — NEVER commit.
-# Only the ciphertext in `encrypted/` should be tracked.
-_plaintext/
+# Plaintext source for the encryption pipeline — NEVER commit.
+# Only the output in `encrypted/` should be tracked.
+src/
 .encrypt-cache.json

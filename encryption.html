@@ -1,0 +1,335 @@
+---
+layout: null
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How encryption works — {{ site.title }}</title>
+  <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
+  <style>
+    .enc-page { max-width: 980px; margin: 0 auto; padding: 0 1rem 4rem; }
+
+    .lane-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0;
+      border: 1px solid var(--border, #ddd);
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 1.5rem 0 2.5rem;
+      background: var(--bg, #fff);
+    }
+    .lane {
+      padding: 0.9rem 1rem;
+      border-right: 1px solid var(--border, #ddd);
+      font-size: 0.85rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 600;
+      text-align: center;
+    }
+    .lane:last-child { border-right: 0; }
+    .lane.laptop  { background: #fef3c7; color: #92400e; }
+    .lane.github  { background: #e0e7ff; color: #3730a3; }
+    .lane.browser { background: #d1fae5; color: #065f46; }
+
+    .step-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      border-top: 1px solid var(--border, #eee);
+    }
+    .step-row:first-of-type { border-top: 0; }
+    .cell {
+      padding: 1rem;
+      border-right: 1px solid var(--border, #eee);
+      min-height: 88px;
+      position: relative;
+    }
+    .cell:last-child { border-right: 0; }
+    .cell.empty { background: repeating-linear-gradient(45deg, transparent 0 8px, rgba(0,0,0,0.02) 8px 16px); }
+
+    .step-num {
+      display: inline-block;
+      width: 1.5em; height: 1.5em;
+      border-radius: 50%;
+      background: #111; color: #fff;
+      text-align: center; line-height: 1.5em;
+      font-size: 0.78rem;
+      margin-right: 0.5em;
+      font-weight: 700;
+    }
+    .step-title { font-weight: 600; }
+    .step-body  { font-size: 0.88rem; margin-top: 0.45rem; color: var(--muted, #555); }
+    .step-body code {
+      font-size: 0.82em;
+      background: rgba(0,0,0,0.06);
+      padding: 0.05em 0.35em;
+      border-radius: 3px;
+    }
+
+    .arrow-down {
+      display: block;
+      text-align: center;
+      color: #888;
+      font-size: 1.2rem;
+      margin: -0.4rem 0;
+      line-height: 1;
+    }
+
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.75rem;
+      margin: 1.5rem 0;
+    }
+    .legend > div {
+      border: 1px solid var(--border, #ddd);
+      border-radius: 8px;
+      padding: 0.75rem 0.9rem;
+      background: var(--bg, #fff);
+    }
+    .legend h4 { margin: 0 0 0.35rem; font-size: 0.95rem; }
+    .legend p  { margin: 0; font-size: 0.86rem; color: var(--muted, #555); }
+
+    .key { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+    .tag-pill {
+      display: inline-block;
+      padding: 0.1em 0.55em;
+      border-radius: 10px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-right: 0.35em;
+      vertical-align: middle;
+    }
+    .pill-plain  { background: #fef3c7; color: #92400e; }
+    .pill-cipher { background: #fee2e2; color: #991b1b; }
+    .pill-key    { background: #ede9fe; color: #5b21b6; }
+
+    .threat {
+      margin-top: 2rem;
+      border: 1px solid var(--border, #ddd);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .threat table { width: 100%; border-collapse: collapse; }
+    .threat th, .threat td {
+      padding: 0.7rem 0.9rem;
+      border-bottom: 1px solid var(--border, #eee);
+      text-align: left;
+      font-size: 0.92rem;
+    }
+    .threat tr:last-child td { border-bottom: 0; }
+    .threat th { background: rgba(0,0,0,0.04); font-weight: 600; }
+    .yes { color: #065f46; font-weight: 700; }
+    .no  { color: #991b1b; font-weight: 700; }
+
+    @media (max-width: 720px) {
+      .lane-grid, .step-row { grid-template-columns: 1fr; }
+      .lane, .cell { border-right: 0; border-bottom: 1px solid var(--border, #eee); }
+      .lane:last-child, .cell:last-child { border-bottom: 0; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <p><a href="{{ '/' | relative_url }}">&larr; back to index</a></p>
+  <h1>How encryption works</h1>
+  <p class="muted">A static site can't have a server, so this site can't have logins. Instead, sensitive files are encrypted <em>before</em> they're committed. Each project chooses its own password &mdash; or skips encryption entirely. Decryption happens in your browser; the password only lives in your head.</p>
+</header>
+
+<main class="enc-page">
+
+<div class="lane-grid" aria-label="Three environments where the encryption flow runs">
+  <div class="lane laptop">🖥️ Your laptop</div>
+  <div class="lane github">☁️ GitHub Pages</div>
+  <div class="lane browser">🌐 Visitor's browser</div>
+
+  <!-- Step 1 -->
+  <div class="step-row">
+    <div class="cell">
+      <div><span class="step-num">1</span><span class="step-title">Write</span></div>
+      <div class="step-body">
+        Drop files into <code>src/&lt;project&gt;/</code>. <code>src/</code> is <code>.gitignore</code>'d &mdash; it never leaves your machine.
+        <br><br>
+        <span class="tag-pill pill-plain">plaintext</span> <code class="key">src/work/salary.md</code><br>
+        <span class="tag-pill pill-plain">plaintext</span> <code class="key">src/public-notes/hello.md</code>
+      </div>
+    </div>
+    <div class="cell empty"></div>
+    <div class="cell empty"></div>
+  </div>
+  <div class="arrow-down" aria-hidden="true">⬇</div>
+
+  <!-- Step 2 -->
+  <div class="step-row">
+    <div class="cell">
+      <div><span class="step-num">2</span><span class="step-title">Per-project decision</span></div>
+      <div class="step-body">
+        <code>npm run encrypt</code> walks each project. For each one, you decide independently:
+        <br><br>
+        <strong>Password set?</strong>
+        <ul style="margin: 0.3em 0 0 1.2em; padding: 0;">
+          <li><strong>Yes</strong> &rarr; Argon2id derives a 256-bit AES key from (password + random salt).</li>
+          <li><strong>No</strong> (empty) &rarr; project is public. No key, no encryption.</li>
+        </ul>
+        <br>
+        <span class="tag-pill pill-key">work key</span>
+        <span class="tag-pill pill-key">personal key</span>
+        <span class="tag-pill pill-plain">public-notes: no key</span>
+      </div>
+    </div>
+    <div class="cell empty"></div>
+    <div class="cell empty"></div>
+  </div>
+  <div class="arrow-down" aria-hidden="true">⬇</div>
+
+  <!-- Step 3 -->
+  <div class="step-row">
+    <div class="cell">
+      <div><span class="step-num">3</span><span class="step-title">Encrypt or copy</span></div>
+      <div class="step-body">
+        <strong>Private projects</strong>: each file is encrypted with the project's key using <strong>AES-256-GCM</strong> (random 12-byte IV, 16-byte auth tag).
+        <br><br>
+        <strong>Public projects</strong>: files are copied as-is.
+        <br><br>
+        A plaintext <code>manifest.json</code> lists every project, marks each as <code>private: true|false</code>, and stores the per-private-project salt.
+        <br><br>
+        <span class="tag-pill pill-cipher">ciphertext</span> <code class="key">encrypted/work/abc123.enc</code><br>
+        <span class="tag-pill pill-plain">plaintext</span> <code class="key">encrypted/public-notes/hello.md</code><br>
+        <span class="tag-pill pill-plain">plaintext</span> <code class="key">encrypted/manifest.json</code>
+      </div>
+    </div>
+    <div class="cell empty"></div>
+    <div class="cell empty"></div>
+  </div>
+  <div class="arrow-down" aria-hidden="true">⬇</div>
+
+  <!-- Step 4 -->
+  <div class="step-row">
+    <div class="cell empty"></div>
+    <div class="cell">
+      <div><span class="step-num">4</span><span class="step-title">Push &amp; serve</span></div>
+      <div class="step-body">
+        <code>git push</code> sends the <code>encrypted/</code> folder to GitHub. Pages serves it like any other static directory.
+        <br><br>
+        Without the password, a private project's blobs are random bytes. Public projects are readable to anyone with the URL.
+      </div>
+    </div>
+    <div class="cell empty"></div>
+  </div>
+  <div class="arrow-down" aria-hidden="true">⬇</div>
+
+  <!-- Step 5 -->
+  <div class="step-row">
+    <div class="cell empty"></div>
+    <div class="cell empty"></div>
+    <div class="cell">
+      <div><span class="step-num">5</span><span class="step-title">Open the site</span></div>
+      <div class="step-body">
+        Browser loads <code>index.html</code> + <code>crypto.js</code>. It fetches the <strong>plaintext</strong> <code>manifest.json</code> and renders:
+        <ul style="margin: 0.3em 0 0 1.2em; padding: 0;">
+          <li><strong>Public</strong> projects with direct links.</li>
+          <li><strong>Private</strong> projects with a 🔒 + password form.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="arrow-down" aria-hidden="true">⬇</div>
+
+  <!-- Step 6 -->
+  <div class="step-row">
+    <div class="cell empty"></div>
+    <div class="cell empty"></div>
+    <div class="cell">
+      <div><span class="step-num">6</span><span class="step-title">Unlock a private project</span></div>
+      <div class="step-body">
+        Type the project's password. The browser runs <strong>the same Argon2id</strong> as the CLI did, on the salt from <code>manifest.json</code>. Same password &rarr; same key.
+        <br><br>
+        It verifies by trying to decrypt the first blob (AES-GCM's auth tag fails on a wrong password). On success, the file list appears.
+        <br><br>
+        <span class="tag-pill pill-key">project key</span> (derived in-browser, lives in memory only)
+      </div>
+    </div>
+  </div>
+  <div class="arrow-down" aria-hidden="true">⬇</div>
+
+  <!-- Step 7 -->
+  <div class="step-row">
+    <div class="cell empty"></div>
+    <div class="cell empty"></div>
+    <div class="cell">
+      <div><span class="step-num">7</span><span class="step-title">Open a file</span></div>
+      <div class="step-body">
+        Click a file. <code>viewer.html</code> fetches the blob, decrypts with the project's key, and renders.
+        <br><br>
+        Markdown is sanitized with DOMPurify + rendered with marked. PDFs go into a sandboxed <code>&lt;iframe&gt;</code> via a <code>Blob</code> URL.
+        <br><br>
+        <span class="tag-pill pill-plain">plaintext</span> in your tab's memory only.
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2>The crypto in one paragraph</h2>
+<div class="legend">
+  <div>
+    <h4>AES-256-GCM</h4>
+    <p>The symmetric cipher that actually scrambles bytes. <em>Authenticated</em>: tampering is detected (decryption fails loudly).</p>
+  </div>
+  <div>
+    <h4>Argon2id</h4>
+    <p>The "stretching" function that turns a memorable password into an AES key. Memory-hard (64&nbsp;MB), which makes GPU brute-force expensive.</p>
+  </div>
+  <div>
+    <h4>Salt (16 bytes, random per group)</h4>
+    <p>Public input mixed into Argon2id. Stops attackers from reusing pre-computed tables across users / sites.</p>
+  </div>
+  <div>
+    <h4>IV (12 bytes, random per file)</h4>
+    <p>Public input to AES-GCM. Must be unique per encryption with the same key, or all bets are off.</p>
+  </div>
+  <div>
+    <h4>Manifest</h4>
+    <p>A plaintext JSON file listing every project, whether it's private, and the salts for private projects. Project names and file counts are visible without any password.</p>
+  </div>
+  <div>
+    <h4>SessionStorage</h4>
+    <p>Where the browser caches your unlocked passwords for the current tab. Cleared when the tab closes. Never sent over the network.</p>
+  </div>
+</div>
+
+<h2>What this protects (and what it doesn't)</h2>
+<div class="threat">
+  <table>
+    <thead>
+      <tr><th>Threat</th><th>Protected?</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Random visitor hits <code>ref.ezcoder.ink</code></td><td class="yes">Yes — ciphertext only</td></tr>
+      <tr><td>Someone clones the public GitHub repo</td><td class="yes">Yes — ciphertext only</td></tr>
+      <tr><td>Brute-force without the password</td><td class="yes">Yes — Argon2id makes guesses expensive</td></tr>
+      <tr><td>Someone watches your push and sees file <em>sizes</em></td><td class="no">No — sizes &amp; count leak</td></tr>
+      <tr><td>You commit a file from <code>src/</code> by mistake</td><td class="no">No — <code>.gitignore</code> helps but review your diffs</td></tr>
+      <tr><td>You use a weak / reused password</td><td class="no">No crypto can save you</td></tr>
+      <tr><td>Your laptop or browser is compromised</td><td class="no">Out of scope</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<p class="muted" style="margin-top: 2rem;">
+  Source: <a href="https://github.com/michaelchung1211/references/blob/main/crypto.js">crypto.js</a>,
+  <a href="https://github.com/michaelchung1211/references/blob/main/tools/encrypt.mjs">tools/encrypt.mjs</a>.
+</p>
+
+</main>
+
+<footer>
+  <p class="muted"><a href="{{ '/' | relative_url }}">&larr; back to index</a></p>
+</footer>
+</body>
+</html>

@@ -31,8 +31,9 @@ exclude:
   - package.json
   - package-lock.json
   - tools
-  - _plaintext
+  - src
 
 # Note: encrypted/ is intentionally NOT excluded — GitHub Pages must serve
-# the ciphertext blobs and manifest.enc. The auto-index in index.html filters
-# /encrypted/* out of the plaintext listing; the locked UI handles them.
+# the ciphertext blobs, the public files, and manifest.json. The auto-index
+# in index.html filters /encrypted/* out of its plaintext listing; the
+# manifest-driven UI handles them.
