@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 980" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fffbeb"/>
+      <stop offset="50%" stop-color="#eff6ff"/>
+      <stop offset="100%" stop-color="#ecfdf5"/>
+    </linearGradient>
+
+    <style>
+      .title       { font-size: 28px; font-weight: 700; fill: #1d1d1f; }
+      .subtitle    { font-size: 14px; fill: #6e6e73; }
+      .env-title   { font-size: 18px; font-weight: 700; }
+      .env-sub     { font-size: 12px; fill: #6e6e73; }
+      .card-title  { font-size: 10px; font-weight: 700; fill: #6e6e73; letter-spacing: 1.5px; }
+      .mono        { font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace; font-size: 13px; fill: #1d1d1f; }
+      .mono-sm     { font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace; font-size: 11px; fill: #6e6e73; }
+      .note        { font-size: 11px; font-style: italic; fill: #6e6e73; }
+      .arrow-label { font-size: 11px; font-family: ui-monospace, monospace; fill: #1d1d1f; }
+      .pill-text   { font-size: 12px; font-family: ui-monospace, monospace; fill: #1d1d1f; }
+      .pill-em     { font-weight: 700; fill: #7c3aed; }
+      .session-step    { font-size: 12.5px; fill: #1d1d1f; }
+      .session-strong  { font-weight: 700; fill: #047857; }
+      .panel-title  { font-size: 15px; font-weight: 700; }
+      .icon { stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+
+    <!-- Lucide icon symbols (CC-BY, https://lucide.dev) -->
+    <symbol id="i-laptop" viewBox="0 0 24 24" class="icon">
+      <path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"/>
+    </symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24" class="icon">
+      <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+    </symbol>
+    <symbol id="i-monitor" viewBox="0 0 24 24" class="icon">
+      <rect width="20" height="14" x="2" y="3" rx="2"/>
+      <line x1="8" x2="16" y1="21" y2="21"/>
+      <line x1="12" x2="12" y1="17" y2="21"/>
+    </symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24" class="icon">
+      <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
+    </symbol>
+    <symbol id="i-folder-lock" viewBox="0 0 24 24" class="icon">
+      <path d="M10 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H20a2 2 0 0 1 2 2v2"/>
+      <rect width="8" height="5" x="14" y="17" rx="1"/>
+      <path d="M20 17v-2a2 2 0 1 0-4 0v2"/>
+    </symbol>
+    <symbol id="i-terminal" viewBox="0 0 24 24" class="icon">
+      <polyline points="4 17 10 11 4 5"/>
+      <line x1="12" x2="20" y1="19" y2="19"/>
+    </symbol>
+    <symbol id="i-file-code" viewBox="0 0 24 24" class="icon">
+      <path d="M10 12.5 8 15l2 2.5"/>
+      <path d="m14 12.5 2 2.5-2 2.5"/>
+      <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+      <path d="M4 22V4a2 2 0 0 1 2-2h8.5L20 7.5V20a2 2 0 0 1-2 2Z"/>
+    </symbol>
+    <symbol id="i-cpu" viewBox="0 0 24 24" class="icon">
+      <rect width="16" height="16" x="4" y="4" rx="2"/>
+      <rect width="6" height="6" x="9" y="9" rx="1"/>
+      <path d="M15 2v2"/><path d="M15 20v2"/>
+      <path d="M2 15h2"/><path d="M2 9h2"/>
+      <path d="M20 15h2"/><path d="M20 9h2"/>
+      <path d="M9 2v2"/><path d="M9 20v2"/>
+    </symbol>
+    <symbol id="i-database" viewBox="0 0 24 24" class="icon">
+      <ellipse cx="12" cy="5" rx="9" ry="3"/>
+      <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/>
+      <path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/>
+    </symbol>
+    <symbol id="i-key" viewBox="0 0 24 24" class="icon">
+      <path d="m21 2-9.6 9.6"/>
+      <circle cx="7.5" cy="15.5" r="5.5"/>
+    </symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24" class="icon">
+      <circle cx="12" cy="12" r="10"/>
+      <polyline points="12 6 12 12 16 14"/>
+    </symbol>
+  </defs>
+
+  <!-- ============== BACKGROUND ============== -->
+  <rect width="1200" height="980" fill="url(#bgGrad)" rx="14"/>
+
+  <!-- ============== TITLE ============== -->
+  <text x="600" y="46" text-anchor="middle" class="title">How the encryption pipeline works</text>
+  <text x="600" y="72" text-anchor="middle" class="subtitle">Three places, two transitions, one password in your head.</text>
+
+  <!-- ================================================================== -->
+  <!-- CARD 1: LAPTOP (amber)   x=30..370   w=340                          -->
+  <!-- ================================================================== -->
+  <g>
+    <rect x="30" y="100" width="340" height="430" fill="#ffffff" stroke="#d2d2d7" rx="10"/>
+    <path d="M40 100 H 360 a 10 10 0 0 1 10 10 V 110 H 30 V 110 a 10 10 0 0 1 10 -10 Z" fill="#d97706"/>
+
+    <g color="#d97706"><use href="#i-laptop" x="42" y="122" width="22" height="22"/></g>
+    <text x="72" y="140" class="env-title" fill="#d97706">1. Your laptop</text>
+    <text x="42" y="166" class="env-sub">Private. Nothing leaves until you push.</text>
+
+    <!-- sub-card 1: src/ -->
+    <rect x="42" y="180" width="316" height="120" fill="#f5f5f7" rx="6"/>
+    <g color="#6e6e73"><use href="#i-folder" x="54" y="194" width="13" height="13"/></g>
+    <text x="72" y="204" class="card-title">SRC/  (GITIGNORED)</text>
+    <text x="54" y="228" class="mono">├─ work/</text>
+    <text x="54" y="248" class="mono">├─ personal/</text>
+    <text x="54" y="268" class="mono">└─ public-notes/</text>
+    <text x="54" y="290" class="note">plaintext, never committed</text>
+
+    <!-- sub-card 2: encrypt.mjs -->
+    <rect x="42" y="316" width="316" height="200" fill="#f5f5f7" rx="6"/>
+    <g color="#6e6e73"><use href="#i-terminal" x="54" y="330" width="13" height="13"/></g>
+    <text x="72" y="340" class="card-title">TOOLS/ENCRYPT.MJS  (CLI)</text>
+    <text x="54" y="364" class="mono">$ npm run encrypt</text>
+    <text x="54" y="384" class="mono">  -- work</text>
+    <text x="54" y="412" class="mono-sm">reads src/  →  prompts password</text>
+    <text x="54" y="430" class="mono-sm">→  derives key (Argon2id)</text>
+    <text x="54" y="448" class="mono-sm">→  AES-GCM encrypts each file</text>
+    <text x="54" y="466" class="mono-sm">→  writes encrypted/</text>
+    <text x="54" y="498" class="note">password lives only in your head</text>
+  </g>
+
+  <!-- ================================================================== -->
+  <!-- ARROW 1   gap=370..430   centered at x=400                          -->
+  <!-- ================================================================== -->
+  <g>
+    <rect x="358" y="288" width="84" height="22" rx="11" fill="#ffffff" stroke="#d2d2d7"/>
+    <text x="400" y="303" text-anchor="middle" class="arrow-label">encrypt CLI</text>
+
+    <line x1="364" y1="324" x2="430" y2="324" stroke="#6e6e73" stroke-width="2.5" stroke-linecap="round"/>
+    <polyline points="420,317 432,324 420,331" fill="none" stroke="#6e6e73" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <rect x="370" y="340" width="60" height="22" rx="11" fill="#ffffff" stroke="#d2d2d7"/>
+    <text x="400" y="355" text-anchor="middle" class="arrow-label">git push</text>
+  </g>
+
+  <!-- ================================================================== -->
+  <!-- CARD 2: GITHUB (blue)   x=430..770   w=340                          -->
+  <!-- ================================================================== -->
+  <g>
+    <rect x="430" y="100" width="340" height="430" fill="#ffffff" stroke="#d2d2d7" rx="10"/>
+    <path d="M440 100 H 760 a 10 10 0 0 1 10 10 V 110 H 430 V 110 a 10 10 0 0 1 10 -10 Z" fill="#2563eb"/>
+
+    <g color="#2563eb"><use href="#i-cloud" x="442" y="122" width="22" height="22"/></g>
+    <text x="472" y="140" class="env-title" fill="#2563eb">2. GitHub Pages</text>
+    <text x="442" y="166" class="env-sub">Public. Anyone can fetch these bytes.</text>
+
+    <!-- sub-card 1: encrypted/ -->
+    <rect x="442" y="180" width="316" height="190" fill="#f5f5f7" rx="6"/>
+    <g color="#6e6e73"><use href="#i-folder-lock" x="454" y="194" width="13" height="13"/></g>
+    <text x="472" y="204" class="card-title">ENCRYPTED/</text>
+
+    <text x="454" y="228" class="mono">manifest.json</text>
+    <text x="754" y="228" class="mono-sm" text-anchor="end">plaintext</text>
+
+    <text x="454" y="248" class="mono">work/&lt;hash&gt;.enc</text>
+    <text x="754" y="248" class="mono-sm" text-anchor="end">ciphertext</text>
+
+    <text x="454" y="268" class="mono">personal/&lt;hash&gt;.enc</text>
+    <text x="754" y="268" class="mono-sm" text-anchor="end">ciphertext</text>
+
+    <text x="454" y="288" class="mono">public-notes/file.md</text>
+    <text x="754" y="288" class="mono-sm" text-anchor="end">plain</text>
+
+    <text x="454" y="320" class="note">manifest exposes project names,</text>
+    <text x="454" y="336" class="note">salts and sizes — never contents</text>
+
+    <!-- sub-card 2: static html/js -->
+    <rect x="442" y="386" width="316" height="130" fill="#f5f5f7" rx="6"/>
+    <g color="#6e6e73"><use href="#i-file-code" x="454" y="400" width="13" height="13"/></g>
+    <text x="472" y="410" class="card-title">STATIC HTML / JS</text>
+
+    <text x="454" y="434" class="mono">index.html</text>
+    <text x="454" y="454" class="mono">viewer.html</text>
+    <text x="454" y="474" class="mono">crypto.js</text>
+    <text x="454" y="500" class="note">served as-is by GitHub Pages</text>
+  </g>
+
+  <!-- ================================================================== -->
+  <!-- ARROW 2   gap=770..830   centered at x=800                          -->
+  <!-- ================================================================== -->
+  <g>
+    <rect x="768" y="288" width="64" height="22" rx="11" fill="#ffffff" stroke="#d2d2d7"/>
+    <text x="800" y="303" text-anchor="middle" class="arrow-label">HTTPS</text>
+
+    <line x1="764" y1="324" x2="830" y2="324" stroke="#6e6e73" stroke-width="2.5" stroke-linecap="round"/>
+    <polyline points="820,317 832,324 820,331" fill="none" stroke="#6e6e73" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <rect x="766" y="340" width="68" height="22" rx="11" fill="#ffffff" stroke="#d2d2d7"/>
+    <text x="800" y="355" text-anchor="middle" class="arrow-label">password</text>
+  </g>
+
+  <!-- ================================================================== -->
+  <!-- CARD 3: BROWSER (green)   x=830..1170   w=340                       -->
+  <!-- ================================================================== -->
+  <g>
+    <rect x="830" y="100" width="340" height="430" fill="#ffffff" stroke="#d2d2d7" rx="10"/>
+    <path d="M840 100 H 1160 a 10 10 0 0 1 10 10 V 110 H 830 V 110 a 10 10 0 0 1 10 -10 Z" fill="#059669"/>
+
+    <g color="#059669"><use href="#i-monitor" x="842" y="122" width="22" height="22"/></g>
+    <text x="872" y="140" class="env-title" fill="#059669">3. Your browser</text>
+    <text x="842" y="166" class="env-sub">Reads. Decrypts in RAM only.</text>
+
+    <!-- sub-card 1: in-memory state -->
+    <rect x="842" y="180" width="316" height="140" fill="#f5f5f7" rx="6"/>
+    <g color="#6e6e73"><use href="#i-cpu" x="854" y="194" width="13" height="13"/></g>
+    <text x="872" y="204" class="card-title">IN-MEMORY STATE</text>
+    <text x="854" y="228" class="mono">manifest (loaded)</text>
+    <text x="854" y="248" class="mono">derived key (per project)</text>
+    <text x="854" y="268" class="mono">decrypted bytes (per file)</text>
+    <text x="854" y="300" class="note">all transient — gone on refresh</text>
+
+    <!-- sub-card 2: sessionStorage -->
+    <rect x="842" y="336" width="316" height="180" fill="#ecfdf5" rx="6" stroke="#059669" stroke-width="1" stroke-dasharray="3 3"/>
+    <g color="#047857"><use href="#i-database" x="854" y="350" width="13" height="13"/></g>
+    <text x="872" y="360" class="card-title" fill="#047857">SESSIONSTORAGE  (per tab)</text>
+    <text x="854" y="386" class="mono">proj-pw:work</text>
+    <text x="1144" y="386" class="mono" text-anchor="end">"•••••"</text>
+    <text x="854" y="406" class="mono">proj-pw:personal</text>
+    <text x="1144" y="406" class="mono" text-anchor="end">"•••••"</text>
+    <line x1="854" y1="424" x2="1146" y2="424" stroke="#d2d2d7" stroke-dasharray="2 3"/>
+    <text x="854" y="446" class="note">cleared when tab closes,</text>
+    <text x="854" y="462" class="note">or per-project by the</text>
+    <text x="854" y="480" font-size="11px" fill="#047857" font-weight="700">"Forget password" button</text>
+    <text x="854" y="500" class="mono-sm" fill="#047857">(see step 4 below)</text>
+  </g>
+
+  <!-- ================================================================== -->
+  <!-- CRYPTO PANEL (purple)   y=555..735                                  -->
+  <!-- ================================================================== -->
+  <g>
+    <rect x="30" y="555" width="1140" height="180" rx="10" fill="#ffffff" stroke="#d2d2d7"/>
+    <rect x="30" y="555" width="6"    height="180" rx="3" fill="#7c3aed"/>
+
+    <g color="#7c3aed"><use href="#i-key" x="50" y="572" width="20" height="20"/></g>
+    <text x="76" y="588" class="panel-title" fill="#7c3aed">Inside the encrypt step</text>
+
+    <!-- Row 1: key derivation -->
+    <g transform="translate(50 612)">
+      <rect x="0"   y="0" width="120" height="32" rx="6" fill="#f5f3ff"/>
+      <text x="60"  y="20" text-anchor="middle" class="pill-text">password</text>
+
+      <text x="132" y="22" text-anchor="middle" class="pill-em" font-size="18">+</text>
+
+      <rect x="148" y="0" width="230" height="32" rx="6" fill="#f5f3ff"/>
+      <text x="263" y="20" text-anchor="middle" class="pill-text">salt  <tspan class="mono-sm">(from manifest)</tspan></text>
+
+      <text x="396" y="22" text-anchor="middle" class="pill-em" font-size="18">→</text>
+
+      <rect x="412" y="0" width="300" height="32" rx="6" fill="#f5f3ff"/>
+      <text x="562" y="20" text-anchor="middle" class="pill-text"><tspan class="pill-em">Argon2id</tspan>  m=64 MB · t=3 · p=1</text>
+
+      <text x="730" y="22" text-anchor="middle" class="pill-em" font-size="18">→</text>
+
+      <rect x="746" y="0" width="180" height="32" rx="6" fill="#f5f3ff"/>
+      <text x="836" y="20" text-anchor="middle" class="pill-text">32-byte AES key</text>
+    </g>
+
+    <!-- Row 2: encrypt -->
+    <g transform="translate(50 660)">
+      <rect x="0"   y="0" width="140" height="32" rx="6" fill="#f5f3ff"/>
+      <text x="70"  y="20" text-anchor="middle" class="pill-text">plaintext file</text>
+
+      <text x="202" y="22" text-anchor="middle" class="pill-em" font-size="18">+</text>
+
+      <rect x="218" y="0" width="190" height="32" rx="6" fill="#f5f3ff"/>
+      <text x="313" y="20" text-anchor="middle" class="pill-text">random 12-byte IV</text>
+
+      <text x="424" y="22" text-anchor="middle" class="pill-em" font-size="18">+</text>
+
+      <rect x="440" y="0" width="110" height="32" rx="6" fill="#f5f3ff"/>
+      <text x="495" y="20" text-anchor="middle" class="pill-text">AES key</text>
+
+      <text x="566" y="22" text-anchor="middle" class="pill-em" font-size="18">→</text>
+
+      <rect x="582" y="0" width="150" height="32" rx="6" fill="#f5f3ff"/>
+      <text x="657" y="20" text-anchor="middle" class="pill-text"><tspan class="pill-em">AES-256-GCM</tspan></text>
+
+      <text x="748" y="22" text-anchor="middle" class="pill-em" font-size="18">→</text>
+
+      <rect x="764" y="0" width="320" height="32" rx="6" fill="#f5f3ff"/>
+      <text x="924" y="20" text-anchor="middle" class="pill-text">[ ver · iv · ciphertext + tag ] = <tspan class="pill-em">.enc</tspan></text>
+    </g>
+
+    <text x="50" y="720" class="mono-sm">Browser does the inverse: password + salt → key, then key + .enc → plaintext. AES-GCM's auth tag means a wrong key throws — no silent corruption.</text>
+  </g>
+
+  <!-- ================================================================== -->
+  <!-- SESSION PANEL (green)   y=755..955                                  -->
+  <!-- ================================================================== -->
+  <g>
+    <rect x="30" y="755" width="1140" height="200" rx="10" fill="#ffffff" stroke="#d2d2d7"/>
+    <rect x="30" y="755" width="6"    height="200" rx="3" fill="#059669"/>
+
+    <g color="#059669"><use href="#i-clock" x="50" y="772" width="20" height="20"/></g>
+    <text x="76" y="788" class="panel-title" fill="#059669">How the browser remembers your password</text>
+
+    <!-- 5 numbered steps in two rows: 3 + 2 -->
+    <!-- Row 1 -->
+    <g transform="translate(50 814)">
+      <circle cx="14" cy="14" r="13" fill="#059669"/>
+      <text x="14" y="19" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">1</text>
+      <text x="36" y="12" class="session-step"><tspan class="session-strong">Open the site.</tspan> Index fetches</text>
+      <text x="36" y="28" class="session-step">manifest.json. Every private project</text>
+      <text x="36" y="44" class="session-step">shows a password form; lists hidden.</text>
+    </g>
+
+    <g transform="translate(420 814)">
+      <circle cx="14" cy="14" r="13" fill="#059669"/>
+      <text x="14" y="19" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">2</text>
+      <text x="36" y="12" class="session-step"><tspan class="session-strong">Type the password.</tspan> JS derives the</text>
+      <text x="36" y="28" class="session-step">key, decrypts one test blob. Right key</text>
+      <text x="36" y="44" class="session-step">→ cache in sessionStorage["proj-pw:…"].</text>
+    </g>
+
+    <g transform="translate(790 814)">
+      <circle cx="14" cy="14" r="13" fill="#059669"/>
+      <text x="14" y="19" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">3</text>
+      <text x="36" y="12" class="session-step"><tspan class="session-strong">Stay in this tab.</tspan> Cached password</text>
+      <text x="36" y="28" class="session-step">unlocks files instantly — no re-typing</text>
+      <text x="36" y="44" class="session-step">required, even after navigating.</text>
+    </g>
+
+    <!-- Row 2 -->
+    <g transform="translate(50 890)">
+      <circle cx="14" cy="14" r="13" fill="#059669"/>
+      <text x="14" y="19" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">4</text>
+      <text x="36" y="12" class="session-step"><tspan class="session-strong">Click "Forget password".</tspan> Removes</text>
+      <text x="36" y="28" class="session-step">just that project's entry. Other</text>
+      <text x="36" y="44" class="session-step">unlocked projects stay open.</text>
+    </g>
+
+    <g transform="translate(420 890)">
+      <circle cx="14" cy="14" r="13" fill="#059669"/>
+      <text x="14" y="19" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">5</text>
+      <text x="36" y="12" class="session-step"><tspan class="session-strong">Close the tab or refresh.</tspan> Browser</text>
+      <text x="36" y="28" class="session-step">wipes sessionStorage. Every project</text>
+      <text x="36" y="44" class="session-step">is locked again on next visit.</text>
+    </g>
+  </g>
+
+</svg>

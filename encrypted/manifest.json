@@ -9,79 +9,26 @@
   },
   "projects": [
     {
-      "name": "personal",
-      "private": true,
-      "files": [
-        {
-          "path": "personal/diary.md",
-          "name": "diary.md",
-          "blob": "personal/4a1b16a2b865f74b4db570f0cf484a92.enc",
-          "type": "md",
-          "ext": "md",
-          "size": 357
-        },
-        {
-          "path": "personal/passwords-cheatsheet.md",
-          "name": "passwords-cheatsheet.md",
-          "blob": "personal/7d4de6cc029b59dc80a27682d15eff10.enc",
-          "type": "md",
-          "ext": "md",
-          "size": 350
-        }
-      ],
-      "salt": "LzA5XrqFxC95kUxz4j6gTQ=="
-    },
-    {
-      "name": "public-notes",
+      "name": "testmyproject",
       "private": false,
       "files": [
         {
-          "path": "public-notes/getting-started.md",
-          "name": "getting-started.md",
-          "publicHref": "public-notes/getting-started.md",
-          "type": "md",
-          "ext": "md",
-          "size": 698
-        }
-      ]
-    },
-    {
-      "name": "testingowo",
-      "private": true,
-      "files": [
-        {
-          "path": "testingowo/example.html",
-          "name": "example.html",
-          "blob": "testingowo/8cf705556be539445e62ed13451e236e.enc",
+          "path": "testmyproject/hii.html",
+          "name": "hii.html",
+          "publicHref": "testmyproject/hii.html",
           "type": "html",
           "ext": "html",
-          "size": 222
-        }
-      ],
-      "salt": "s5QdHy5a7hxI6syhpsz5pQ=="
-    },
-    {
-      "name": "work",
-      "private": true,
-      "files": [
-        {
-          "path": "work/offer-letter.md",
-          "name": "offer-letter.md",
-          "blob": "work/57c98a8009ec0c1dcce0dbd8bbed2550.enc",
-          "type": "md",
-          "ext": "md",
-          "size": 344
+          "size": 5
         },
         {
-          "path": "work/salary-notes.md",
-          "name": "salary-notes.md",
-          "blob": "work/7142de7e2311651da4c71bcaebaa37ba.enc",
-          "type": "md",
-          "ext": "md",
-          "size": 330
+          "path": "testmyproject/secondlayer/owo.html",
+          "name": "owo.html",
+          "publicHref": "testmyproject/secondlayer/owo.html",
+          "type": "html",
+          "ext": "html",
+          "size": 11
         }
-      ],
-      "salt": "3K4cNTotSf4fYEUt1HADHQ=="
+      ]
     }
   ]
 }

@@ -12,7 +12,7 @@ Live: <https://ref.ezcoder.ink>
 - **Node CLI** (`tools/encrypt.mjs`) for the build-time encryption step. Uses `hash-wasm` for Argon2id and the Web Crypto API for AES-GCM.
 - **No server**. Everything is static. The browser does the decryption.
 
-A full architecture walkthrough lives in [architecture.html](architecture.html) (or open `/architecture.html` on the live site). The standalone system diagram is at [diagram.html](diagram.html) — open it and click **Save as PDF** for an offline copy.
+A full architecture walkthrough lives in [architecture.html](architecture.html) (or open `/architecture.html` on the live site). The big colored picture at the top of that page is [assets/system-diagram.svg](assets/system-diagram.svg) — open it directly to view it standalone.
 
 ## Project layout
 
@@ -22,7 +22,7 @@ references/
 ├── index.html              # the homepage (Jekyll renders it, then JS hydrates the manifest section)
 ├── viewer.html             # renders one .md / .pdf / .html / encrypted blob
 ├── architecture.html       # explainer page: how Pages, rendering, and encryption fit together
-├── diagram.html            # standalone printable system diagram (Save-as-PDF button)
+├── assets/system-diagram.svg  # the colored system diagram embedded at the top of architecture.html
 ├── crypto.js               # browser-side AES-GCM + Argon2id helpers
 ├── assets/style.css        # styling
 ├── tools/encrypt.mjs       # Node CLI: reads src/, writes encrypted/
