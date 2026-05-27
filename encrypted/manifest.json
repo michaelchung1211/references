@@ -46,6 +46,21 @@
       ]
     },
     {
+      "name": "testingowo",
+      "private": true,
+      "files": [
+        {
+          "path": "testingowo/example.html",
+          "name": "example.html",
+          "blob": "testingowo/8cf705556be539445e62ed13451e236e.enc",
+          "type": "html",
+          "ext": "html",
+          "size": 222
+        }
+      ],
+      "salt": "s5QdHy5a7hxI6syhpsz5pQ=="
+    },
+    {
       "name": "work",
       "private": true,
       "files": [

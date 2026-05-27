@@ -8,6 +8,7 @@ layout: null
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ site.title }}</title>
   <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
 <header>
@@ -84,7 +85,7 @@ layout: null
   <p class="muted">
     <a href="https://github.com/michaelchung1211/references">Github link</a>
     &nbsp;·&nbsp;
-    <a href="{{ '/encryption.html' | relative_url }}">How encryption works</a>
+    <a href="{{ '/architecture.html' | relative_url }}">How it works</a>
   </p>
 </footer>
 
@@ -100,10 +101,18 @@ layout: null
     if (res.ok) manifest = await res.json();
   } catch (_e) { /* no src/ content yet — nothing to show */ }
 
-  for (const project of (manifest?.projects ?? [])) {
+  const projects = manifest?.projects ?? [];
+  for (const project of projects) {
     const section = document.createElement('section');
     const h2 = document.createElement('h2');
-    h2.textContent = project.private ? `${project.name} 🔒` : project.name;
+    h2.textContent = project.name;
+    if (project.private) {
+      h2.appendChild(document.createTextNode(' '));
+      const icon = document.createElement('i');
+      icon.setAttribute('data-lucide', 'lock');
+      icon.className = 'inline-icon';
+      h2.appendChild(icon);
+    }
     section.appendChild(h2);
 
     if (!project.private) {
@@ -218,6 +227,8 @@ layout: null
       }
     }
   }
+
+  window.lucide?.createIcons();
 </script>
 </body>
 </html>

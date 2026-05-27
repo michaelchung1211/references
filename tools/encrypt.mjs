@@ -12,6 +12,15 @@
 // The manifest at encrypted/manifest.json is PLAINTEXT — it just lists every
 // project, whether it's private, and (for private ones) the per-project salt.
 // Passwords never leave your laptop.
+//
+// Usage:
+//   npm run encrypt                 # interactive: lists projects, prompts which to encrypt
+//   npm run encrypt -- work         # encrypts only the "work" project
+//   npm run encrypt -- work personal # encrypts multiple
+//   npm run encrypt -- all          # encrypts every project under src/
+//
+// Projects you don't select keep their existing encrypted/<project>/ folder
+// and manifest entry verbatim — no password prompt, no blob churn.
 
 import { readdir, readFile, writeFile, mkdir, rm, stat, copyFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -162,10 +171,6 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`Found ${[...projects.values()].reduce((n, a) => n + a.length, 0)} file(s) across ${projects.size} project(s):`);
-  for (const [p, files] of projects) console.log(`  - ${p}: ${files.length} file(s)`);
-  console.log('');
-
   // 2. Look at the previous manifest to know which projects were private/public.
   const prev = await loadPreviousManifest();
   const prevByName = new Map();
@@ -173,9 +178,60 @@ async function main() {
     for (const p of prev.projects) prevByName.set(p.name, p);
   }
 
-  // 3. Decide per-project: public or private + password.
+  function statusOf(name) {
+    const prior = prevByName.get(name);
+    if (!prior) return 'new';
+    return prior.private ? 'private' : 'public';
+  }
+
+  // 3. Decide which projects to encrypt this run.
+  //    CLI args take precedence; with no args, prompt interactively.
+  const cliArgs = process.argv.slice(2).filter((a) => !a.startsWith('-'));
+  let targets;
+  if (cliArgs.length > 0) {
+    const allFlag = cliArgs.includes('all');
+    const requested = allFlag ? [...projects.keys()] : cliArgs;
+    const unknown = requested.filter((n) => !projects.has(n));
+    if (unknown.length > 0) {
+      console.error(`Unknown project(s): ${unknown.join(', ')}`);
+      console.error(`Available: ${[...projects.keys()].join(', ')}`);
+      process.exit(1);
+    }
+    targets = new Set(requested);
+  } else {
+    console.log(`Found ${projects.size} project(s) in src/:`);
+    for (const name of projects.keys()) {
+      const files = projects.get(name);
+      console.log(`  - ${name} (${statusOf(name)}) — ${files.length} file(s)`);
+    }
+    console.log('');
+    const answer = await ask('Which to encrypt? (comma-separated names, or "all"): ');
+    const parts = answer.split(',').map((s) => s.trim()).filter(Boolean);
+    if (parts.length === 0) {
+      console.log('Nothing selected. Exiting.');
+      process.exit(0);
+    }
+    const allFlag = parts.includes('all');
+    const requested = allFlag ? [...projects.keys()] : parts;
+    const unknown = requested.filter((n) => !projects.has(n));
+    if (unknown.length > 0) {
+      console.error(`Unknown project(s): ${unknown.join(', ')}`);
+      process.exit(1);
+    }
+    targets = new Set(requested);
+  }
+
+  console.log('');
+  console.log(`Encrypting: ${[...targets].join(', ')}`);
+  const skipped = [...projects.keys()].filter((n) => !targets.has(n));
+  if (skipped.length > 0) {
+    console.log(`Leaving alone: ${skipped.join(', ')}`);
+  }
+  console.log('');
+
+  // 4. Decide per-target-project: public or private + password.
   const projectMeta = new Map(); // name -> { private, password?, salt? }
-  for (const name of projects.keys()) {
+  for (const name of targets) {
     const prior = prevByName.get(name);
     if (prior && prior.private === false) {
       console.log(`Project "${name}": public (carried over from previous build)`);
@@ -204,8 +260,9 @@ async function main() {
     console.log('');
   }
 
-  // 4. Clear out previous output for projects we're rebuilding, then write fresh.
-  for (const name of projects.keys()) {
+  // 5. Clear out previous output for ONLY target projects, then write fresh.
+  //    Skipped projects keep their existing encrypted/<name>/ folder untouched.
+  for (const name of targets) {
     await rmrf(path.join(OUT_DIR, name));
   }
   await mkdir(OUT_DIR, { recursive: true });
@@ -216,7 +273,19 @@ async function main() {
     projects: [],
   };
 
-  for (const [name, files] of projects) {
+  // 5a. Carry over manifest entries for projects we didn't touch.
+  for (const name of skipped) {
+    const prior = prevByName.get(name);
+    if (prior) {
+      manifest.projects.push(prior);
+    } else {
+      console.warn(`  note: src/${name}/ exists but has no previous manifest entry and was not selected — it won't appear on the site until you encrypt it.`);
+    }
+  }
+
+  // 5b. Encrypt / copy the target projects.
+  for (const name of targets) {
+    const files = projects.get(name);
     const meta = projectMeta.get(name);
     const outProjDir = path.join(OUT_DIR, name);
     await mkdir(outProjDir, { recursive: true });
@@ -242,7 +311,7 @@ async function main() {
           ext: ext.replace(/^\./, '').toLowerCase(),
           size: data.byteLength,
         });
-        console.log(`  🔒 ${relPath} -> encrypted/${name}/${blobName}`);
+        console.log(`  [enc] ${relPath} -> encrypted/${name}/${blobName}`);
       }
     } else {
       // Public: copy bytes verbatim.
@@ -261,7 +330,7 @@ async function main() {
           ext: ext.replace(/^\./, '').toLowerCase(),
           size: data.byteLength,
         });
-        console.log(`  📄 ${relPath} -> encrypted/${name}/${subPath}`);
+        console.log(`  [pub] ${relPath} -> encrypted/${name}/${subPath}`);
       }
     }
 
@@ -274,7 +343,8 @@ async function main() {
   await writeFile(MANIFEST_PATH, JSON.stringify(manifest, null, 2) + '\n');
   console.log(`\nWrote encrypted/manifest.json (${manifest.projects.length} project(s)).`);
 
-  // 5. Garbage-collect projects that no longer exist in src/.
+  // 6. Garbage-collect projects whose src/ folder has been deleted.
+  //    Skipped projects (still present in src/) keep their existing blobs.
   if (existsSync(OUT_DIR)) {
     const entries = await readdir(OUT_DIR, { withFileTypes: true });
     for (const e of entries) {
