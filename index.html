@@ -168,6 +168,29 @@ layout: null
     const fileList = document.createElement('ul');
     fileList.hidden = true;
     section.appendChild(fileList);
+
+    const forgetBtn = document.createElement('button');
+    forgetBtn.type = 'button';
+    forgetBtn.className = 'forget-btn';
+    forgetBtn.hidden = true;
+    const forgetIcon = document.createElement('i');
+    forgetIcon.setAttribute('data-lucide', 'lock');
+    forgetIcon.className = 'inline-icon';
+    forgetBtn.appendChild(forgetIcon);
+    forgetBtn.appendChild(document.createTextNode(' Forget password'));
+    forgetBtn.addEventListener('click', () => {
+      sessionStorage.removeItem('proj-pw:' + project.name);
+      fileList.hidden = true;
+      fileList.innerHTML = '';
+      form.hidden = false;
+      desc.hidden = false;
+      forgetBtn.hidden = true;
+      input.value = '';
+      err.textContent = '';
+      input.focus();
+    });
+    section.appendChild(forgetBtn);
+
     root.appendChild(section);
 
     // Restore from session if we already unlocked this project this tab.
@@ -196,6 +219,7 @@ layout: null
         form.hidden = true;
         desc.hidden = true;
         err.textContent = '';
+        forgetBtn.hidden = false;
         renderFiles();
       } catch (_e) {
         if (!silent) err.textContent = 'Wrong password — try again.';

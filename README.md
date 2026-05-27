@@ -12,7 +12,7 @@ Live: <https://ref.ezcoder.ink>
 - **Node CLI** (`tools/encrypt.mjs`) for the build-time encryption step. Uses `hash-wasm` for Argon2id and the Web Crypto API for AES-GCM.
 - **No server**. Everything is static. The browser does the decryption.
 
-A full architecture walkthrough lives in [architecture.html](architecture.html) (or open `/architecture.html` on the live site).
+A full architecture walkthrough lives in [architecture.html](architecture.html) (or open `/architecture.html` on the live site). The standalone system diagram is at [diagram.html](diagram.html) — open it and click **Save as PDF** for an offline copy.
 
 ## Project layout
 
@@ -22,6 +22,7 @@ references/
 ├── index.html              # the homepage (Jekyll renders it, then JS hydrates the manifest section)
 ├── viewer.html             # renders one .md / .pdf / .html / encrypted blob
 ├── architecture.html       # explainer page: how Pages, rendering, and encryption fit together
+├── diagram.html            # standalone printable system diagram (Save-as-PDF button)
 ├── crypto.js               # browser-side AES-GCM + Argon2id helpers
 ├── assets/style.css        # styling
 ├── tools/encrypt.mjs       # Node CLI: reads src/, writes encrypted/
@@ -104,11 +105,22 @@ npm install                # installs hash-wasm for Argon2id
 
 Markdown files **do not need front matter** — they're rendered client-side by [viewer.html](viewer.html).
 
+### Deleting content
+
+Same workflow, mirrored:
+
+- **Delete one file** → delete it from `src/<project>/<file>`, then `npm run encrypt -- <project>`. You **must select that project** in the encrypt run, otherwise the CLI leaves the project's encrypted/ folder alone and the old blob stays. Every other file in the project gets re-encrypted (new IVs, new blob filenames), so expect a larger git diff for that project.
+- **Delete an entire project** → delete the whole `src/<project>/` folder, then run `npm run encrypt` (any invocation — even encrypting an unrelated project). The garbage-collect step at the end removes `encrypted/<project>/` and the project's entry is dropped from the manifest.
+- **Delete the last file in a private project but keep the project** → uncommon. Easiest path: delete `src/<project>/` entirely, run encrypt to drop it from the site, then re-create the project later when you have new content.
+
+`encrypted/manifest.json` is rewritten atomically at the end of every encrypt run, so a CLI crash mid-run won't corrupt it. The CLI also verifies your password against an existing blob **before wiping anything**, so a typo on re-encrypt errors out with "Wrong password — try again. (Nothing has been written yet.)" instead of silently destroying old ciphertext.
+
 ### Reading content on the site
 
 - **Public projects**: links work straight from the index. Markdown opens in the viewer; PDFs / HTML open directly.
 - **Private projects**: the index shows the project with a lock <img src="https://unpkg.com/lucide-static@latest/icons/lock.svg" width="13" alt="lock"> icon. Type the project's password → file list appears → click a file to read.
 - Passwords are cached in the tab's `sessionStorage` only. Closing the tab clears them.
+- Each unlocked project shows a **Forget password** button that clears just that project's cached password (and re-shows the password form). Other unlocked projects stay open.
 
 ### Threat model
 

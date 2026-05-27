@@ -28,29 +28,148 @@ layout: null
 <main>
 
   <!-- ============================================================== -->
-  <!-- BIG PICTURE                                                       -->
+  <!-- BIG PICTURE — structural diagram                                 -->
   <!-- ============================================================== -->
   <section id="big-picture">
-    <h2 style="margin-top:0;">The journey of one file</h2>
-    <p>From the moment you save a note on your laptop to the moment you read it on your phone:</p>
 
-    <div class="hero-flow">
-      <span class="flow-node"><i data-lucide="folder-pen" class="inline-icon"></i> you edit <code>src/work/note.md</code></span>
-      <span class="flow-arrow"><i data-lucide="arrow-right"></i></span>
-      <span class="flow-node"><i data-lucide="terminal" class="inline-icon"></i> <code>npm run encrypt -- work</code></span>
-      <span class="flow-arrow"><i data-lucide="arrow-right"></i></span>
-      <span class="flow-node"><i data-lucide="lock" class="inline-icon"></i> <code>encrypted/work/&lt;hash&gt;.enc</code></span>
-      <span class="flow-arrow"><i data-lucide="arrow-right"></i></span>
-      <span class="flow-node"><i data-lucide="git-commit-horizontal" class="inline-icon"></i> <code>git push</code></span>
-      <span class="flow-arrow"><i data-lucide="arrow-right"></i></span>
-      <span class="flow-node"><i data-lucide="cloud" class="inline-icon"></i> GitHub Pages builds</span>
-      <span class="flow-arrow"><i data-lucide="arrow-right"></i></span>
-      <span class="flow-node"><i data-lucide="globe" class="inline-icon"></i> <code>ref.ezcoder.ink</code></span>
-      <span class="flow-arrow"><i data-lucide="arrow-right"></i></span>
-      <span class="flow-node"><i data-lucide="user" class="inline-icon"></i> you type password, browser decrypts &amp; renders</span>
+    <div class="diagram-canvas">
+      <h2 class="diagram-title">System diagram</h2>
+      <p class="diagram-subtitle">Three places, two transitions, one password in your head. Follow the arrows left to right; the bottom panels open up the crypto and the browser's memory.</p>
+
+      <!-- Three environments side by side -->
+      <div class="diagram-row">
+
+        <!-- 1. LAPTOP -->
+        <div class="env env-laptop">
+          <div class="env-header">
+            <i data-lucide="laptop" class="inline-icon"></i>
+            <h3>1. Your laptop</h3>
+          </div>
+          <p class="env-sub">Private. Nothing leaves until you push.</p>
+
+          <div class="env-card">
+            <div class="env-card-title"><i data-lucide="folder" class="inline-icon"></i> src/ <span class="env-card-pill">gitignored</span></div>
+            ├─ work/<br>
+            ├─ personal/<br>
+            └─ public-notes/
+            <div class="env-card-note">plaintext, never committed</div>
+          </div>
+
+          <div class="env-card">
+            <div class="env-card-title"><i data-lucide="terminal" class="inline-icon"></i> tools/encrypt.mjs</div>
+            <code>npm run encrypt -- work</code><br>
+            reads src/, derives key,<br>
+            writes encrypted/.
+          </div>
+        </div>
+
+        <!-- Arrow 1 -->
+        <div class="env-arrow">
+          <span class="arrow-label">npm run encrypt</span>
+          <i data-lucide="arrow-right"></i>
+          <span class="arrow-label">git push</span>
+        </div>
+
+        <!-- 2. GITHUB -->
+        <div class="env env-github">
+          <div class="env-header">
+            <i data-lucide="cloud" class="inline-icon"></i>
+            <h3>2. GitHub Pages</h3>
+          </div>
+          <p class="env-sub">Public. Anyone can fetch these bytes.</p>
+
+          <div class="env-card">
+            <div class="env-card-title"><i data-lucide="folder-lock" class="inline-icon"></i> encrypted/</div>
+            manifest.json &nbsp;<span style="color:var(--muted);">plaintext</span><br>
+            work/&lt;hash&gt;.enc &nbsp;<span style="color:var(--muted);">ciphertext</span><br>
+            personal/&lt;hash&gt;.enc<br>
+            public-notes/file.md &nbsp;<span style="color:var(--muted);">plain</span>
+            <div class="env-card-note">manifest exposes project names + salts + sizes, never contents</div>
+          </div>
+
+          <div class="env-card">
+            <div class="env-card-title"><i data-lucide="file-code" class="inline-icon"></i> static html/js</div>
+            index.html · viewer.html · crypto.js
+          </div>
+        </div>
+
+        <!-- Arrow 2 -->
+        <div class="env-arrow">
+          <span class="arrow-label">HTTPS fetch</span>
+          <i data-lucide="arrow-right"></i>
+          <span class="arrow-label">type password</span>
+        </div>
+
+        <!-- 3. BROWSER -->
+        <div class="env env-browser">
+          <div class="env-header">
+            <i data-lucide="monitor" class="inline-icon"></i>
+            <h3>3. Your browser</h3>
+          </div>
+          <p class="env-sub">Reads. Decrypts in memory only.</p>
+
+          <div class="env-card">
+            <div class="env-card-title"><i data-lucide="cpu" class="inline-icon"></i> in-memory state</div>
+            manifest (loaded)<br>
+            derived key (per project)<br>
+            decrypted bytes (per file)
+            <div class="env-card-note">all transient — gone on refresh</div>
+          </div>
+
+          <div class="env-card">
+            <div class="env-card-title"><i data-lucide="database" class="inline-icon"></i> sessionStorage <span class="env-card-pill">per tab</span></div>
+            proj-pw:work &nbsp;= "•••••"<br>
+            proj-pw:personal = "•••••"
+            <div class="env-card-note">cleared when tab closes, or per-project by the <strong>Forget password</strong> button</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- CRYPTO PANEL -->
+      <div class="diagram-crypto">
+        <h3><i data-lucide="key-round" class="inline-icon"></i> Inside the encrypt step</h3>
+        <div class="crypto-step">
+          <span class="pill">password</span>
+          <span class="op">+</span>
+          <span class="pill">salt <em>(from manifest)</em></span>
+          <span class="op">&rarr;</span>
+          <span class="pill"><em>Argon2id</em> &nbsp;m=64MB · t=3 · p=1</span>
+          <span class="op">&rarr;</span>
+          <span class="pill">32-byte AES key</span>
+        </div>
+        <div class="crypto-step">
+          <span class="pill">plaintext file</span>
+          <span class="op">+</span>
+          <span class="pill">random 12-byte IV</span>
+          <span class="op">+</span>
+          <span class="pill">AES key</span>
+          <span class="op">&rarr;</span>
+          <span class="pill"><em>AES-256-GCM</em></span>
+          <span class="op">&rarr;</span>
+          <span class="pill">[ver · iv · ciphertext+tag] = <em>.enc</em></span>
+        </div>
+        <p class="muted" style="margin: 0.4rem 0 0; font-size: 0.8rem;">The browser does the inverse: <em>password + salt &rarr; key</em>, then <em>key + .enc &rarr; plaintext</em>. AES-GCM's auth tag means the wrong key throws an exception — no chance of silent corruption.</p>
+      </div>
+
+      <!-- SESSION PANEL -->
+      <div class="diagram-session">
+        <h3><i data-lucide="clock" class="inline-icon"></i> How the browser remembers your password</h3>
+        <ol class="session-steps">
+          <li><strong>Open the site.</strong> The index fetches <code>/encrypted/manifest.json</code> over HTTPS. Every private project shows a password form; file lists are hidden.</li>
+          <li><strong>Type the password.</strong> JS derives the key via Argon2id, then tries to decrypt the first blob to verify. Right key &rarr; cache <code>sessionStorage["proj-pw:&lt;project&gt;"]</code> and reveal the file list. Wrong key &rarr; "Wrong password"; nothing leaks.</li>
+          <li><strong>Stay in this tab.</strong> Cached password unlocks files instantly (no re-typing).</li>
+          <li><strong>Click <em>Forget password</em>.</strong> Removes <em>just that project's</em> entry from sessionStorage. Other unlocked projects stay open.</li>
+          <li><strong>Close the tab or refresh.</strong> The browser wipes sessionStorage. Every project is locked again on next visit.</li>
+        </ol>
+      </div>
+
+      <div class="save-pdf-bar">
+        <a href="{{ '/diagram.html' | relative_url }}" class="save-pdf-btn"><i data-lucide="file-down" class="inline-icon"></i> Open standalone diagram &amp; save as PDF</a>
+      </div>
     </div>
 
-    <p>The next three chapters break this down. The whole stack is <strong>static</strong> — there is no server holding your key, no database, nothing to log in to. Every secret stays in your head.</p>
+    <p>The next three chapters break this down. The whole stack is <strong>static</strong> — there is no server holding your key, no database, nothing to log in to. Every secret stays in your head (or, briefly, in your tab's sessionStorage).</p>
   </section>
 
   <!-- ============================================================== -->
@@ -252,7 +371,8 @@ layout: null
       <li>For each <strong>private</strong> project the index draws a password form. The file list is hidden.</li>
       <li>You type the password. The JS calls <code>deriveKey(password, salt)</code>, then fetches the project's first blob and tries to decrypt it.</li>
       <li>AES-GCM is <em>authenticated</em>: the wrong key throws an exception. Right key &rarr; file list reveals. Wrong key &rarr; "Wrong password" message; nothing leaks.</li>
-      <li>The password is cached in <code>sessionStorage</code> for that tab only. Click a file &rarr; the viewer re-derives the key and decrypts in memory.</li>
+      <li>The password is cached in <code>sessionStorage</code> under <code>proj-pw:&lt;project&gt;</code> for that tab only. Click a file &rarr; the viewer re-derives the key and decrypts in memory.</li>
+      <li>A <strong>Forget password</strong> button appears once a project is unlocked. Clicking it removes that one project's entry from <code>sessionStorage</code> and re-shows the password form. Other unlocked projects stay open.</li>
     </ol>
 
     <h3><i data-lucide="file-json" class="inline-icon"></i> What the manifest looks like</h3>
@@ -372,6 +492,22 @@ layout: null
       <div class="faq-a">
         <p><strong>Private &rarr; public:</strong> edit <code>encrypted/manifest.json</code>, set <code>"private": false</code>, delete the project's <code>.enc</code> blobs, then re-run encrypt. (Or just delete the project's entry entirely and let the CLI re-prompt.)</p>
         <p><strong>Public &rarr; private:</strong> delete the project's entry from <code>encrypted/manifest.json</code> and re-run; the CLI will prompt for a password.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <p class="faq-q"><i data-lucide="lock-open" class="inline-icon"></i> How do I lock a project again without closing the tab?</p>
+      <div class="faq-a">
+        <p>Click the <strong>Forget password</strong> button that appears under each unlocked private project's file list. It removes that project's entry from <code>sessionStorage</code> and re-shows the password form. Other unlocked projects stay open. The button is only visible while the project is unlocked.</p>
+        <p class="muted">Closing the tab or doing a full refresh has the same effect for <em>every</em> unlocked project at once.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <p class="faq-q"><i data-lucide="file-down" class="inline-icon"></i> How do I get a PDF of the system diagram?</p>
+      <div class="faq-a">
+        <p>Open <a href="{{ '/diagram.html' | relative_url }}">/diagram.html</a> and click the <strong>Save as PDF</strong> button (or press <code>Cmd/Ctrl + P</code>). The page is print-optimized for landscape A4 and the browser's print-to-PDF produces the file.</p>
+        <p class="muted">There's no pre-baked PDF artifact in the repo on purpose — the diagram stays in sync with the code that way. If you want one committed, install Puppeteer / Chrome and run <code>chrome --headless --print-to-pdf=diagram.pdf file://$(pwd)/diagram.html</code>.</p>
       </div>
     </div>
 
