@@ -22,7 +22,7 @@
 // Projects you don't select keep their existing encrypted/<project>/ folder
 // and manifest entry verbatim — no password prompt, no blob churn.
 
-import { readdir, readFile, writeFile, mkdir, rm, stat, copyFile } from 'node:fs/promises';
+import { readdir, readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
@@ -55,6 +55,32 @@ async function encryptBlob(key, plaintext) {
   out.set(iv, 1);
   out.set(ct, 13);
   return out;
+}
+
+async function decryptBlob(key, blob) {
+  if (blob[0] !== VERSION) throw new Error('Unknown blob version: ' + blob[0]);
+  const iv = blob.subarray(1, 13);
+  const ct = blob.subarray(13);
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
+  return new Uint8Array(pt);
+}
+
+// Confirms `password` matches the key that produced `prior`'s existing blobs.
+// Returns true on match, false on mismatch. Returns true if there is nothing
+// to verify against (no prior files, or the blob is missing from disk).
+async function passwordMatchesPrior(prior, password) {
+  if (!prior?.files?.length) return true;
+  const blobPath = path.join(OUT_DIR, prior.files[0].blob);
+  if (!existsSync(blobPath)) return true;
+  const salt = Buffer.from(prior.salt, 'base64');
+  const key = await deriveKey(password, salt);
+  const data = new Uint8Array(await readFile(blobPath));
+  try {
+    await decryptBlob(key, data);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function sha256Hex(bytes) {
@@ -243,8 +269,15 @@ async function main() {
       let pw;
       while (true) {
         pw = await ask(`  password: `, { hidden: true });
-        if (pw.length >= 8) break;
-        console.log('  Password must be at least 8 characters.');
+        if (pw.length < 8) {
+          console.log('  Password must be at least 8 characters.');
+          continue;
+        }
+        // Verify against an existing blob before wiping anything. Without this, a
+        // typo would silently re-encrypt every file with the wrong key — the old
+        // ciphertext would be gone and the remembered password would no longer work.
+        if (await passwordMatchesPrior(prior, pw)) break;
+        console.log('  Wrong password — try again. (Nothing has been written yet.)');
       }
       projectMeta.set(name, { private: true, password: pw, salt: Buffer.from(prior.salt, 'base64') });
       continue;

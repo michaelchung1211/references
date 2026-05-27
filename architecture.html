@@ -13,158 +13,250 @@ layout: null
 <body>
 <header>
   <p><a href="{{ '/' | relative_url }}">&larr; back to index</a></p>
-  <h1>How it works</h1>
-  <p class="muted">A walkthrough of the three pieces that make this site go: GitHub Pages, in-browser file rendering, and the encryption pipeline.</p>
+  <h1>How this site works</h1>
+  <p class="lead">Three moving parts work together: <strong>GitHub Pages</strong> hosts the files, the <strong>viewer</strong> renders them in the browser, and the <strong>encryption pipeline</strong> keeps private notes private. Read top-to-bottom for the full picture, or jump to a chapter.</p>
+
+  <ul class="toc">
+    <li><a href="#big-picture" data-color="blue"><i data-lucide="map"></i> Big picture</a></li>
+    <li><a href="#pages" data-color="blue"><i data-lucide="cloud-upload"></i> 1. GitHub Pages</a></li>
+    <li><a href="#rendering" data-color="purple"><i data-lucide="file-text"></i> 2. Rendering</a></li>
+    <li><a href="#encryption" data-color="green"><i data-lucide="lock"></i> 3. Encryption</a></li>
+    <li><a href="#faq" data-color="amber"><i data-lucide="help-circle"></i> FAQ</a></li>
+  </ul>
 </header>
 
-<main class="markdown-body">
-
-  <h2>Stack</h2>
-  <p>This is a <strong>static</strong> site &mdash; no server, no backend. The pieces:</p>
-  <ul style="list-style: disc; padding-left: 1.25rem;">
-    <li><strong>Jekyll</strong> &mdash; the default static-site generator GitHub Pages ships with. Builds run on push.</li>
-    <li><strong>Vanilla HTML + ES modules</strong> &mdash; no framework, no bundler. Two pages: <code>index.html</code> (the listing) and <code>viewer.html</code> (renders one file).</li>
-    <li><strong>marked + DOMPurify</strong> (CDN) &mdash; parse and sanitize Markdown in the browser.</li>
-    <li><strong>Web Crypto API + hash-wasm</strong> &mdash; AES-GCM decryption and Argon2id key derivation, all client-side.</li>
-    <li><strong>Node CLI</strong> (<code>tools/encrypt.mjs</code>) &mdash; the only step that runs on your laptop. Takes plaintext from <code>src/</code> and writes ciphertext to <code>encrypted/</code>.</li>
-  </ul>
-
-  <hr>
+<main>
 
   <!-- ============================================================== -->
-  <!-- 1. GITHUB PAGES                                                  -->
+  <!-- BIG PICTURE                                                       -->
   <!-- ============================================================== -->
-  <div class="section-row">
-    <span class="section-icon"><i data-lucide="cloud-upload"></i></span>
-    <h2>1. How GitHub Pages loads this site</h2>
-  </div>
+  <section id="big-picture">
+    <h2 style="margin-top:0;">The journey of one file</h2>
+    <p>From the moment you save a note on your laptop to the moment you read it on your phone:</p>
 
-  <p>When you push to <code>main</code>, GitHub does roughly this:</p>
+    <div class="hero-flow">
+      <span class="flow-node"><i data-lucide="folder-pen" class="inline-icon"></i> you edit <code>src/work/note.md</code></span>
+      <span class="flow-arrow"><i data-lucide="arrow-right"></i></span>
+      <span class="flow-node"><i data-lucide="terminal" class="inline-icon"></i> <code>npm run encrypt -- work</code></span>
+      <span class="flow-arrow"><i data-lucide="arrow-right"></i></span>
+      <span class="flow-node"><i data-lucide="lock" class="inline-icon"></i> <code>encrypted/work/&lt;hash&gt;.enc</code></span>
+      <span class="flow-arrow"><i data-lucide="arrow-right"></i></span>
+      <span class="flow-node"><i data-lucide="git-commit-horizontal" class="inline-icon"></i> <code>git push</code></span>
+      <span class="flow-arrow"><i data-lucide="arrow-right"></i></span>
+      <span class="flow-node"><i data-lucide="cloud" class="inline-icon"></i> GitHub Pages builds</span>
+      <span class="flow-arrow"><i data-lucide="arrow-right"></i></span>
+      <span class="flow-node"><i data-lucide="globe" class="inline-icon"></i> <code>ref.ezcoder.ink</code></span>
+      <span class="flow-arrow"><i data-lucide="arrow-right"></i></span>
+      <span class="flow-node"><i data-lucide="user" class="inline-icon"></i> you type password, browser decrypts &amp; renders</span>
+    </div>
 
-  <ol style="list-style: decimal; padding-left: 1.5rem;">
-    <li>Spins up a build container.</li>
-    <li>Reads <code>_config.yml</code> and runs <strong>Jekyll</strong> against the repo.</li>
-    <li>Jekyll copies every file into a <code>_site/</code> output directory, transforming any file whose top has YAML <em>front matter</em>. Files without front matter are passed through as-is.</li>
-    <li>Publishes <code>_site/</code> as a static website at the configured URL (here, <a href="https://ref.ezcoder.ink">ref.ezcoder.ink</a> via the <code>CNAME</code> file).</li>
-  </ol>
+    <p>The next three chapters break this down. The whole stack is <strong>static</strong> — there is no server holding your key, no database, nothing to log in to. Every secret stays in your head.</p>
+  </section>
 
-  <p>Two important details for this project:</p>
+  <!-- ============================================================== -->
+  <!-- CHAPTER 1: GITHUB PAGES                                           -->
+  <!-- ============================================================== -->
+  <section id="pages" class="chapter chapter-blue">
+    <div class="chapter-head">
+      <span class="chapter-num">1</span>
+      <h2><i data-lucide="cloud-upload" class="inline-icon"></i> GitHub Pages &amp; Jekyll</h2>
+    </div>
 
-  <div class="callout">
-    <div class="callout-title"><i data-lucide="file-code" class="inline-icon"></i> Front matter is what makes Jekyll touch a file.</div>
-    <p style="margin: 0;"><code>index.html</code> and <code>viewer.html</code> both start with:</p>
+    <p class="lede"><strong>What it solves:</strong> turning a <code>git push</code> into a live website with zero deploy commands.</p>
+
+    <h3><i data-lucide="route" class="inline-icon"></i> The build pipeline</h3>
+
+    <div class="flow">
+      <span class="flow-node"><i data-lucide="git-commit-horizontal" class="inline-icon"></i> push to <code>main</code></span>
+      <span class="flow-arrow"><i data-lucide="arrow-right"></i></span>
+      <span class="flow-node"><i data-lucide="box" class="inline-icon"></i> GitHub spins up a build container</span>
+      <span class="flow-arrow"><i data-lucide="arrow-right"></i></span>
+      <span class="flow-node"><i data-lucide="cog" class="inline-icon"></i> Jekyll runs against the repo</span>
+      <span class="flow-arrow"><i data-lucide="arrow-right"></i></span>
+      <span class="flow-node"><i data-lucide="folder-output" class="inline-icon"></i> output to <code>_site/</code></span>
+      <span class="flow-arrow"><i data-lucide="arrow-right"></i></span>
+      <span class="flow-node"><i data-lucide="globe" class="inline-icon"></i> served at <code>ref.ezcoder.ink</code></span>
+    </div>
+
+    <h3><i data-lucide="list-checks" class="inline-icon"></i> Step by step</h3>
+    <ol class="steps">
+      <li>You push to <code>main</code>. GitHub detects a Pages-enabled repo and queues a build.</li>
+      <li>A build container reads <a href="https://github.com/michaelchung1211/references/blob/main/_config.yml"><code>_config.yml</code></a>. That file controls Jekyll: site title, what to exclude, which auto-plugins to disable.</li>
+      <li>Jekyll walks every file. Any file whose first three lines are <code>---&hellip;---</code> (YAML front matter) gets <em>processed</em>: Liquid template tags like <code>&#123;&#123; site.title &#125;&#125;</code> are expanded. Other files are passed through byte-for-byte.</li>
+      <li>The result lands in <code>_site/</code>, which GitHub publishes as a static site.</li>
+      <li>The <a href="https://github.com/michaelchung1211/references/blob/main/CNAME"><code>CNAME</code></a> file tells GitHub Pages to serve the site at the custom domain.</li>
+    </ol>
+
+    <h3><i data-lucide="file-code" class="inline-icon"></i> Why <code>index.html</code> and <code>viewer.html</code> start with three dashes</h3>
+    <p>Open either file and you'll see this on top:</p>
     <pre><code>---
 layout: null
 ---</code></pre>
-    <p style="margin: 0;">Those three lines are an empty front-matter block. They tell Jekyll: <em>"process this file (so my Liquid template tags work), but don't wrap it in any layout."</em> Without the block, Jekyll wouldn't expand <code>&#123;&#123; site.title &#125;&#125;</code> or <code>&#123;% assign %&#125;</code> inside the file.</p>
-  </div>
+    <p>That empty front-matter block is the magic. It tells Jekyll: <em>"process me so my Liquid tags get expanded, but don't wrap me in any layout template."</em> Without those three lines, <code>&#123;&#123; site.baseurl &#125;&#125;</code> and friends would ship to the browser as literal text.</p>
 
-  <div class="callout">
-    <div class="callout-title"><i data-lucide="filter" class="inline-icon"></i> <code>_config.yml</code> controls what ships.</div>
-    <p style="margin: 0;">The <code>exclude:</code> list strips out things that shouldn't be on the public site: <code>src/</code> (your plaintext source), <code>tools/</code> (the Node CLI), <code>node_modules/</code>, <code>README.md</code>, <code>Gemfile</code>, etc. Importantly, <code>encrypted/</code> is <strong>not</strong> excluded &mdash; GitHub Pages must serve the ciphertext blobs, public files, and <code>manifest.json</code> for the browser to fetch.</p>
-  </div>
+    <div class="callout callout-info">
+      <div class="callout-title"><i data-lucide="filter" class="inline-icon"></i> <code>_config.yml</code> controls what ships</div>
+      <p style="margin:0">The <code>exclude:</code> list strips out everything that shouldn't be on the public site: <code>src/</code>, <code>tools/</code>, <code>node_modules/</code>, <code>README.md</code>, <code>Gemfile</code>. Crucially, <code>encrypted/</code> is <strong>not</strong> excluded — GitHub Pages must serve those <code>.enc</code> blobs and the manifest so the browser can fetch them.</p>
+    </div>
 
-  <p>Several GitHub-Pages default plugins are also disabled in <code>_config.yml</code> (<code>optional_front_matter</code>, <code>readme_index</code>, <code>default_layout</code>, etc.) so that loose <code>.md</code> files in the repo are left untouched &mdash; we want them to remain as static files so the browser can fetch and render them.</p>
+    <div class="callout callout-warn">
+      <div class="callout-title"><i data-lucide="triangle-alert" class="inline-icon"></i> Several Pages plugins are disabled on purpose</div>
+      <p style="margin:0"><code>_config.yml</code> explicitly turns off <code>optional_front_matter</code>, <code>readme_index</code>, <code>default_layout</code>, <code>titles_from_headings</code>, <code>relative_links</code>. If they were on, Jekyll would try to "help" by turning loose <code>.md</code> files into pages, which would prevent the viewer from fetching the raw text and would mangle anchors.</p>
+    </div>
 
-  <hr>
-
-  <!-- ============================================================== -->
-  <!-- 2. RENDERING .md / .pdf / .html                                  -->
-  <!-- ============================================================== -->
-  <div class="section-row">
-    <span class="section-icon"><i data-lucide="file-text"></i></span>
-    <h2>2. How <code>.md</code> / <code>.pdf</code> / <code>.html</code> files are rendered</h2>
-  </div>
-
-  <p>Markdown is the only format we need to do real work on. PDFs and HTML files are handed straight to the browser.</p>
-
-  <h3>The index page</h3>
-  <p><code>index.html</code> renders the listing in two passes:</p>
-  <ol style="list-style: decimal; padding-left: 1.5rem;">
-    <li><strong>Server-side (Jekyll)</strong> &mdash; the Liquid block on top walks <code>site.static_files</code>, finds every <code>.md</code>, <code>.html</code>, <code>.htm</code>, <code>.pdf</code>, groups them by top-level folder, and writes a <code>&lt;section&gt;</code> per topic. (This is the legacy plaintext-topic-folder route.)</li>
-    <li><strong>Client-side (JS)</strong> &mdash; the <code>&lt;script type="module"&gt;</code> at the bottom fetches <code>/encrypted/manifest.json</code> and hydrates a section per project, with a password form for any project marked <code>"private": true</code>.</li>
-  </ol>
-
-  <h3>Markdown &rarr; HTML</h3>
-  <p>The index links to <code>viewer.html?path=…</code> for every <code>.md</code> file. The viewer:</p>
-  <ol style="list-style: decimal; padding-left: 1.5rem;">
-    <li>Reads the <code>?path=</code> query parameter.</li>
-    <li><code>fetch(path)</code> to grab the raw Markdown text from GitHub Pages.</li>
-    <li><code>marked.parse(md)</code> turns the Markdown into an HTML string.</li>
-    <li><code>DOMPurify.sanitize(html)</code> strips anything dangerous (script tags, inline handlers, etc.) &mdash; defence in depth, since the source is yours but you might paste in untrusted content one day.</li>
-    <li>Sets <code>content.innerHTML = …</code>. Done.</li>
-  </ol>
-  <p class="muted">No <em>front matter</em> needed on your <code>.md</code> files &mdash; the viewer treats the whole file as Markdown body.</p>
-
-  <h3>PDFs and HTML</h3>
-  <p>For <code>.pdf</code> the index links straight to the file on GitHub Pages. The browser opens it with its built-in PDF viewer &mdash; no JS involved. Same idea for <code>.html</code>: it loads as a regular page.</p>
-
-  <p>For <strong>encrypted</strong> PDFs and HTML, decryption happens in memory, then the viewer wraps the resulting bytes in an <code>iframe</code> using <code>URL.createObjectURL(new Blob([bytes], { type: '…' }))</code>. The blob URL only exists in this tab.</p>
-
-  <div class="callout">
-    <div class="callout-title"><i data-lucide="shield-check" class="inline-icon"></i> Encrypted HTML runs sandboxed.</div>
-    <p style="margin: 0;">The viewer's iframe for encrypted HTML sets <code>sandbox="allow-same-origin"</code> &mdash; no scripts, no top-navigation, no form submission. The HTML is yours, but the sandbox keeps "what if I encrypted a file someone sent me" from biting later.</p>
-  </div>
-
-  <hr>
+    <h3><i data-lucide="folder-search" class="inline-icon"></i> Where to look</h3>
+    <ul>
+      <li><a href="https://github.com/michaelchung1211/references/blob/main/_config.yml" class="code-link">_config.yml</a> — site config, exclude list, disabled plugins.</li>
+      <li><a href="https://github.com/michaelchung1211/references/blob/main/CNAME" class="code-link">CNAME</a> — one line, the custom domain.</li>
+    </ul>
+  </section>
 
   <!-- ============================================================== -->
-  <!-- 3. ENCRYPTION                                                    -->
+  <!-- CHAPTER 2: RENDERING                                              -->
   <!-- ============================================================== -->
-  <div class="section-row">
-    <span class="section-icon"><i data-lucide="lock"></i></span>
-    <h2>3. How the encryption works</h2>
-  </div>
+  <section id="rendering" class="chapter chapter-purple">
+    <div class="chapter-head">
+      <span class="chapter-num">2</span>
+      <h2><i data-lucide="file-text" class="inline-icon"></i> How files are rendered</h2>
+    </div>
 
-  <p>The threat model is simple: <em>I want to put private notes in a public GitHub repo so I can read them from anywhere, but anyone scraping the repo should just see ciphertext.</em></p>
+    <p class="lede"><strong>What it solves:</strong> turning <code>.md</code>, <code>.pdf</code>, and <code>.html</code> files into something readable in the browser, without any build step per file.</p>
 
-  <h3>Layout</h3>
-  <p>Two parallel trees:</p>
-  <ul style="list-style: disc; padding-left: 1.25rem;">
-    <li><code>src/</code> &mdash; plaintext source. <strong>Gitignored.</strong> Never leaves your laptop.</li>
-    <li><code>encrypted/</code> &mdash; committed output. Contains <code>manifest.json</code> + per-project <code>.enc</code> blobs (or plain files for public projects).</li>
-  </ul>
+    <p>Two pages cooperate:</p>
+    <ul>
+      <li><strong><code>index.html</code></strong> &mdash; lists every file (the homepage).</li>
+      <li><strong><code>viewer.html</code></strong> &mdash; renders <em>one</em> file when you click on it.</li>
+    </ul>
 
-  <p>Each top-level folder under <code>src/</code> is a <strong>project</strong> with its own privacy decision: <em>password</em> = encrypted, or <em>empty password</em> = public.</p>
+    <h3><i data-lucide="list" class="inline-icon"></i> The index: two passes over the same DOM</h3>
 
-  <h3>The write side: <code>tools/encrypt.mjs</code></h3>
-  <p>Run from the repo root with <code>npm run encrypt</code>. For each project:</p>
-
-  <div class="callout">
-    <div class="callout-title"><i data-lucide="folder-lock" class="inline-icon"></i> Private project</div>
-    <ol style="list-style: decimal; padding-left: 1.5rem; margin: 0.4rem 0 0;">
-      <li>Generate (or re-use) a random 16-byte salt &mdash; stored plaintext in <code>manifest.json</code>.</li>
-      <li>Derive a 32-byte key with <strong>Argon2id</strong> (m=64 MB, t=3, p=1) from <code>(password, salt)</code>. The password is never written anywhere.</li>
-      <li>For each file: pick a random 12-byte IV, encrypt with <strong>AES-256-GCM</strong>, prepend <code>[version=1][iv:12]</code> &rarr; <code>[ver][iv][ciphertext + 16-byte tag]</code>.</li>
-      <li>Hash the resulting blob with SHA-256 and use the first 16 bytes as the filename (e.g. <code>4a1b16a2b865f74b4db570f0cf484a92.enc</code>). The hash hides the original filename.</li>
-      <li>Record an entry in <code>manifest.json</code>: <code>{ path, name, blob, type, ext, size }</code>.</li>
+    <ol class="steps">
+      <li><strong>Server-side (Jekyll)</strong> &mdash; the Liquid block on top walks <code>site.static_files</code>, picks out every <code>.md</code> / <code>.html</code> / <code>.htm</code> / <code>.pdf</code>, groups them by top-level folder, and writes one <code>&lt;section&gt;</code> per topic. This is the legacy plaintext-topic-folder path.</li>
+      <li><strong>Client-side (JavaScript)</strong> &mdash; the <code>&lt;script type="module"&gt;</code> at the bottom <code>fetch()</code>s <code>/encrypted/manifest.json</code>, then renders a section per project. Private projects get a password form; public projects get an immediate file list.</li>
     </ol>
-  </div>
 
-  <div class="callout">
-    <div class="callout-title"><i data-lucide="folder-open" class="inline-icon"></i> Public project</div>
-    <p style="margin: 0;">Copy bytes verbatim into <code>encrypted/&lt;project&gt;/&lt;subpath&gt;</code>. The manifest records a <code>publicHref</code> instead of a <code>blob</code>. No password prompt, no key, no IV.</p>
-  </div>
+    <h3><i data-lucide="braces" class="inline-icon"></i> Markdown becomes HTML, in five lines</h3>
 
-  <h3>The read side: <code>crypto.js</code> + the index/viewer</h3>
-  <ol style="list-style: decimal; padding-left: 1.5rem;">
-    <li>Page loads. <code>index.html</code> fetches <code>/encrypted/manifest.json</code>.</li>
-    <li>For each <strong>private</strong> project, it draws a password form. There's no list of files visible yet.</li>
-    <li>You type the password. The script fetches the project's salt from the manifest, calls <code>deriveKey(password, salt)</code> &rarr; AES-GCM key.</li>
-    <li>To <em>verify</em> the password is right, it fetches the first file's <code>.enc</code> blob and tries to decrypt. AES-GCM has built-in authentication: wrong key &rarr; the <code>decrypt()</code> call throws. Right key &rarr; you see the file list.</li>
-    <li>The password is cached in <code>sessionStorage</code> for that tab only. Click a file &rarr; the viewer fetches that blob, decrypts it, renders it inline.</li>
-  </ol>
+    <p>When you click a <code>.md</code> link, the index sends you to <code>viewer.html?path=&hellip;</code>. The viewer does this:</p>
 
-  <h3>File format</h3>
-  <p>Each <code>.enc</code> blob is just:</p>
-  <pre><code>┌──────┬──────┬─────────────────────────────┐
-│ ver  │ iv   │ ciphertext (incl. 16-byte    │
-│  1B  │ 12B  │ AES-GCM auth tag at the end) │
-└──────┴──────┴─────────────────────────────┘</code></pre>
-  <p class="muted">Version byte gives us room to change the format later without breaking old blobs. Currently always <code>0x01</code>.</p>
+    <div class="flow">
+      <span class="flow-node"><i data-lucide="link" class="inline-icon"></i> read <code>?path=</code></span>
+      <span class="flow-arrow"><i data-lucide="arrow-right"></i></span>
+      <span class="flow-node"><i data-lucide="download" class="inline-icon"></i> <code>fetch(path)</code></span>
+      <span class="flow-arrow"><i data-lucide="arrow-right"></i></span>
+      <span class="flow-node"><i data-lucide="wand-sparkles" class="inline-icon"></i> <code>marked.parse(md)</code></span>
+      <span class="flow-arrow"><i data-lucide="arrow-right"></i></span>
+      <span class="flow-node"><i data-lucide="shield-check" class="inline-icon"></i> <code>DOMPurify.sanitize(html)</code></span>
+      <span class="flow-arrow"><i data-lucide="arrow-right"></i></span>
+      <span class="flow-node"><i data-lucide="layout" class="inline-icon"></i> <code>content.innerHTML = &hellip;</code></span>
+    </div>
 
-  <h3>What the manifest looks like</h3>
-  <pre><code>{
+    <p>Both libraries load from a CDN — the page itself is just glue.</p>
+
+    <div class="callout callout-tip">
+      <div class="callout-title"><i data-lucide="sparkles" class="inline-icon"></i> No front matter required</div>
+      <p style="margin:0">The viewer treats the whole <code>.md</code> file as Markdown body. You don't need <code>title:</code> / <code>date:</code> blocks at the top of every note &mdash; just start writing.</p>
+    </div>
+
+    <h3><i data-lucide="file" class="inline-icon"></i> PDFs and HTML</h3>
+    <ul>
+      <li><strong>Public</strong>: the index links straight to the file. The browser's built-in viewer opens it — no JS involved.</li>
+      <li><strong>Encrypted</strong>: the viewer decrypts the bytes in memory, wraps them in a Blob, and shows them in an <code>iframe</code> via <code>URL.createObjectURL()</code>. The blob URL only exists in your tab.</li>
+    </ul>
+
+    <div class="callout callout-info">
+      <div class="callout-title"><i data-lucide="shield" class="inline-icon"></i> Encrypted HTML runs sandboxed</div>
+      <p style="margin:0">The iframe for decrypted HTML carries <code>sandbox="allow-same-origin"</code> &mdash; no scripts, no top-navigation, no form submission. The HTML is yours, but the sandbox keeps "what if I encrypted something untrusted" from biting later.</p>
+    </div>
+
+    <h3><i data-lucide="folder-search" class="inline-icon"></i> Where to look</h3>
+    <ul>
+      <li><a href="https://github.com/michaelchung1211/references/blob/main/index.html" class="code-link">index.html</a> &mdash; both passes live here.</li>
+      <li><a href="https://github.com/michaelchung1211/references/blob/main/viewer.html" class="code-link">viewer.html</a> &mdash; the per-file renderer.</li>
+    </ul>
+  </section>
+
+  <!-- ============================================================== -->
+  <!-- CHAPTER 3: ENCRYPTION                                             -->
+  <!-- ============================================================== -->
+  <section id="encryption" class="chapter chapter-green">
+    <div class="chapter-head">
+      <span class="chapter-num">3</span>
+      <h2><i data-lucide="lock" class="inline-icon"></i> The encryption pipeline</h2>
+    </div>
+
+    <p class="lede"><strong>What it solves:</strong> putting private notes in a public GitHub repo so I can read them from anywhere, while anyone else who finds the repo sees only ciphertext.</p>
+
+    <h3><i data-lucide="folder-tree" class="inline-icon"></i> Two parallel trees</h3>
+    <ul>
+      <li><code>src/</code> &mdash; plaintext source. <strong>Gitignored.</strong> Never leaves your laptop.</li>
+      <li><code>encrypted/</code> &mdash; committed output. Contains <code>manifest.json</code> + per-project <code>.enc</code> blobs (or plain files for public projects).</li>
+    </ul>
+    <p>Each top-level folder under <code>src/</code> is a <strong>project</strong>, and each project independently chooses its own privacy: <em>password</em> = encrypted, or <em>empty password</em> = public.</p>
+
+    <h3><i data-lucide="key-round" class="inline-icon"></i> Building a key from a password</h3>
+    <p>You never store the key. You store only the <em>salt</em>. The key is re-derived every time, from your password + the salt:</p>
+
+    <div class="flow">
+      <span class="flow-node"><i data-lucide="user" class="inline-icon"></i> password</span>
+      <span class="flow-node">+</span>
+      <span class="flow-node"><i data-lucide="dices" class="inline-icon"></i> 16-byte salt</span>
+      <span class="flow-arrow"><i data-lucide="arrow-right"></i></span>
+      <span class="flow-node"><i data-lucide="cog" class="inline-icon"></i> Argon2id<br><span style="color:var(--muted);font-size:0.75rem;">m=64MB, t=3, p=1</span></span>
+      <span class="flow-arrow"><i data-lucide="arrow-right"></i></span>
+      <span class="flow-node"><i data-lucide="key-round" class="inline-icon"></i> 32-byte AES key</span>
+    </div>
+
+    <p>Argon2id is a deliberately slow, memory-hungry function. Even with a fast GPU, brute-forcing one password takes ~64 MB of RAM and three iterations per attempt &mdash; far slower than plain SHA-256.</p>
+
+    <h3><i data-lucide="package" class="inline-icon"></i> The <code>.enc</code> blob format</h3>
+
+    <p>Every encrypted file on disk has the same shape:</p>
+
+    <div class="format-strip">
+      <div>
+        <div class="field-name">version</div>
+        <code>1 byte</code><br>
+        <span style="color:var(--muted);font-size:0.8rem;">always <code>0x01</code></span>
+      </div>
+      <div>
+        <div class="field-name">IV</div>
+        <code>12 bytes</code><br>
+        <span style="color:var(--muted);font-size:0.8rem;">random per file</span>
+      </div>
+      <div>
+        <div class="field-name">AES-GCM ciphertext + auth tag</div>
+        <code>n + 16 bytes</code><br>
+        <span style="color:var(--muted);font-size:0.8rem;">the last 16 bytes are the integrity tag</span>
+      </div>
+    </div>
+
+    <p>The whole blob is hashed with SHA-256; the first 16 bytes of the hash become the filename, e.g. <code>4a1b16a2b865f74b4db570f0cf484a92.enc</code>. This hides the original filename — the manifest is the only place that maps a blob back to its real name.</p>
+
+    <h3><i data-lucide="upload" class="inline-icon"></i> Write side: <code>tools/encrypt.mjs</code></h3>
+    <p>Run from the repo root. Per-project: you pick which projects to (re-)encrypt; the rest are left untouched.</p>
+
+    <ol class="steps">
+      <li>The CLI walks <code>src/</code>, groups files by top-level folder, and asks you which projects to operate on.</li>
+      <li>For each selected <strong>existing private</strong> project: it asks for the password and <strong>verifies</strong> it by decrypting one existing blob. <em>If you typo, nothing is wiped</em>; you just get another try.</li>
+      <li>For each selected <strong>new</strong> project: it asks for a password (empty = public). If you choose a password, a random 16-byte salt is generated.</li>
+      <li>For each selected project: it wipes <code>encrypted/&lt;project&gt;/</code>, then either encrypts every file with AES-GCM (private) or copies bytes verbatim (public).</li>
+      <li>The manifest is rewritten with new entries for selected projects + previous entries for skipped ones.</li>
+      <li>Any <code>encrypted/&lt;project&gt;/</code> whose <code>src/&lt;project&gt;/</code> has been deleted is garbage-collected.</li>
+    </ol>
+
+    <h3><i data-lucide="download" class="inline-icon"></i> Read side: <code>crypto.js</code> + the index/viewer</h3>
+
+    <ol class="steps">
+      <li>The page loads. <code>index.html</code> fetches <code>/encrypted/manifest.json</code> &mdash; project names, salts, file sizes are all visible.</li>
+      <li>For each <strong>private</strong> project the index draws a password form. The file list is hidden.</li>
+      <li>You type the password. The JS calls <code>deriveKey(password, salt)</code>, then fetches the project's first blob and tries to decrypt it.</li>
+      <li>AES-GCM is <em>authenticated</em>: the wrong key throws an exception. Right key &rarr; file list reveals. Wrong key &rarr; "Wrong password" message; nothing leaks.</li>
+      <li>The password is cached in <code>sessionStorage</code> for that tab only. Click a file &rarr; the viewer re-derives the key and decrypts in memory.</li>
+    </ol>
+
+    <h3><i data-lucide="file-json" class="inline-icon"></i> What the manifest looks like</h3>
+    <pre><code>{
   "version": 2,
   "kdf": { "name": "argon2id", "memorySize": 65536, "iterations": 3, "parallelism": 1, "hashLength": 32 },
   "projects": [
@@ -173,7 +265,7 @@ layout: null
       "private": true,
       "salt": "LzA5XrqFxC95kUxz4j6gTQ==",
       "files": [
-        { "path": "personal/diary.md", "name": "diary.md", "blob": "personal/4a1b16a2b865….enc", "type": "md", "ext": "md", "size": 357 }
+        { "path": "personal/diary.md", "name": "diary.md", "blob": "personal/4a1b16a2b865&hellip;.enc", "type": "md", "ext": "md", "size": 357 }
       ]
     },
     {
@@ -185,25 +277,111 @@ layout: null
     }
   ]
 }</code></pre>
-  <p>Everything in the manifest is plaintext: project names, file names, file sizes, salts. None of that is sensitive on its own. What's secret is the <em>contents</em> &mdash; and that's exactly what lives in the <code>.enc</code> blobs.</p>
+    <p>Everything in the manifest is plaintext: project names, file names, file sizes, the salt. None of that is sensitive on its own. What's secret is the <em>contents</em> &mdash; and those live inside the <code>.enc</code> blobs.</p>
 
-  <h3>What this does and doesn't protect</h3>
-  <div class="callout">
-    <div class="callout-title"><i data-lucide="check" class="inline-icon"></i> What's protected</div>
-    <ul style="list-style: disc; padding-left: 1.25rem; margin: 0;">
-      <li>File contents of private projects. Without the password, the blobs are random-looking bytes.</li>
-      <li>Argon2id makes offline brute-force expensive (~64 MB / attempt, 3 iterations).</li>
-      <li>Wrong-password attempts are detected by AES-GCM's auth tag &mdash; no chance of silent corruption.</li>
+    <h3><i data-lucide="shield-half" class="inline-icon"></i> Threat model</h3>
+
+    <div class="callout callout-tip">
+      <div class="callout-title"><i data-lucide="check" class="inline-icon"></i> What's protected</div>
+      <ul style="list-style:disc;padding-left:1.25rem;margin:0.3rem 0 0;">
+        <li>The <em>contents</em> of private files. Without the password, blobs are random-looking bytes.</li>
+        <li>Argon2id makes offline brute-forcing expensive (~64 MB and 3 iterations per attempt).</li>
+        <li>Wrong-password attempts are detected by AES-GCM's auth tag &mdash; no silent corruption.</li>
+        <li>Re-encrypt typos are caught before any data is wiped (see chapter 3 step 2).</li>
+      </ul>
+    </div>
+
+    <div class="callout callout-warn">
+      <div class="callout-title"><i data-lucide="triangle-alert" class="inline-icon"></i> What's <em>not</em> protected</div>
+      <ul style="list-style:disc;padding-left:1.25rem;margin:0.3rem 0 0;">
+        <li>The <em>existence</em> of encrypted content, the project names, file counts, and approximate file sizes are public (they're in the manifest).</li>
+        <li>If your password is weak, leaked, or your device is compromised, the scheme can't help.</li>
+        <li>There's no forward secrecy &mdash; the same password derives the same key forever.</li>
+      </ul>
+    </div>
+
+    <h3><i data-lucide="folder-search" class="inline-icon"></i> Where to look</h3>
+    <ul>
+      <li><a href="https://github.com/michaelchung1211/references/blob/main/tools/encrypt.mjs" class="code-link">tools/encrypt.mjs</a> &mdash; the CLI.</li>
+      <li><a href="https://github.com/michaelchung1211/references/blob/main/crypto.js" class="code-link">crypto.js</a> &mdash; the browser-side helpers (mirror of the CLI's crypto).</li>
     </ul>
-  </div>
-  <div class="callout">
-    <div class="callout-title"><i data-lucide="x" class="inline-icon"></i> What's not</div>
-    <ul style="list-style: disc; padding-left: 1.25rem; margin: 0;">
-      <li>The <em>existence</em> of encrypted content, the project names, the number of files, and approximate file sizes are all public (they're in the manifest).</li>
-      <li>If your password is weak, leaked, or your device is compromised, the scheme can't help.</li>
-      <li>This is not a secure messaging system &mdash; there's no forward secrecy, no key rotation built in beyond "re-encrypt with a new password and force the old blobs to be deleted from <code>encrypted/</code>".</li>
-    </ul>
-  </div>
+  </section>
+
+  <!-- ============================================================== -->
+  <!-- FAQ                                                               -->
+  <!-- ============================================================== -->
+  <section id="faq">
+    <h2 style="margin-top:2.5rem;">FAQ &amp; recipes</h2>
+    <p class="muted">Common operations and what happens under the hood.</p>
+
+    <div class="faq-item">
+      <p class="faq-q"><i data-lucide="file-minus" class="inline-icon"></i> How do I delete a single file?</p>
+      <div class="faq-a">
+        <ol class="steps" style="--chapter-color: var(--accent-amber);">
+          <li>Delete the file from <code>src/&lt;project&gt;/&lt;file&gt;</code>.</li>
+          <li>Run <code>npm run encrypt -- &lt;project&gt;</code> — you have to <strong>select that project</strong>, otherwise the CLI leaves it alone.</li>
+          <li>The CLI wipes <code>encrypted/&lt;project&gt;/</code> and rewrites it without the deleted file. The manifest entry is replaced.</li>
+        </ol>
+        <p class="muted">Every other file in that project gets re-encrypted with new IVs, so the git diff for that project will include all of its blobs even though only one file changed. That's expected.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <p class="faq-q"><i data-lucide="folder-minus" class="inline-icon"></i> How do I delete an entire project?</p>
+      <div class="faq-a">
+        <ol class="steps" style="--chapter-color: var(--accent-amber);">
+          <li>Delete the whole <code>src/&lt;project&gt;/</code> folder.</li>
+          <li>Run <code>npm run encrypt</code> (any invocation works — even encrypting an unrelated project).</li>
+          <li>The garbage-collect step at the end of the CLI removes <code>encrypted/&lt;project&gt;/</code>, and the manifest is rewritten without that project's entry.</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <p class="faq-q"><i data-lucide="shield-question" class="inline-icon"></i> Can <code>manifest.json</code> get corrupted if I do something wrong?</p>
+      <div class="faq-a">
+        <p>In normal use, no. The CLI rewrites the manifest atomically at the end of a run; if it crashes earlier, the manifest is untouched. The two real risk paths:</p>
+        <div class="callout callout-tip" style="margin:0.6rem 0;">
+          <div class="callout-title"><i data-lucide="check" class="inline-icon"></i> Wrong password during re-encrypt</div>
+          <p style="margin:0;">Previously this was a footgun. Now the CLI verifies your password against an existing blob <em>before</em> wiping anything. Typo &rarr; "Wrong password — try again. (Nothing has been written yet.)" Your old blobs are safe.</p>
+        </div>
+        <div class="callout callout-warn" style="margin:0.6rem 0;">
+          <div class="callout-title"><i data-lucide="triangle-alert" class="inline-icon"></i> Manually editing <code>manifest.json</code></div>
+          <p style="margin:0;">Possible but discouraged. As long as the JSON stays valid and each entry keeps its fields (<code>name</code>, <code>private</code>, <code>files[]</code>, <code>salt</code> for private), the site keeps working. If you break it, the cleanest fix is to delete the manifest entry + the corresponding <code>encrypted/&lt;project&gt;/</code> folder and re-run encrypt.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <p class="faq-q"><i data-lucide="key-round" class="inline-icon"></i> I forgot the password to a project. Can I recover the files?</p>
+      <div class="faq-a">
+        <p>No. That's the point of Argon2id + AES-GCM. The plaintext is gone from <code>encrypted/</code> entirely. If you still have your <code>src/</code> folder on disk, it's plaintext and you can start a new project with a new password.</p>
+        <p>To start fresh: delete the project's entry from <code>encrypted/manifest.json</code>, delete <code>encrypted/&lt;project&gt;/</code>, then run <code>npm run encrypt -- &lt;project&gt;</code> — the CLI will treat it as new and ask for a new password.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <p class="faq-q"><i data-lucide="rotate-cw" class="inline-icon"></i> How do I change a project's password?</p>
+      <div class="faq-a">
+        <p>Delete the project's entry from <code>encrypted/manifest.json</code>, delete <code>encrypted/&lt;project&gt;/</code>, then run <code>npm run encrypt -- &lt;project&gt;</code>. The CLI treats it as a new project (since there's no prior entry) and prompts for a fresh password.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <p class="faq-q"><i data-lucide="globe-lock" class="inline-icon"></i> How do I flip a project between public and private?</p>
+      <div class="faq-a">
+        <p><strong>Private &rarr; public:</strong> edit <code>encrypted/manifest.json</code>, set <code>"private": false</code>, delete the project's <code>.enc</code> blobs, then re-run encrypt. (Or just delete the project's entry entirely and let the CLI re-prompt.)</p>
+        <p><strong>Public &rarr; private:</strong> delete the project's entry from <code>encrypted/manifest.json</code> and re-run; the CLI will prompt for a password.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <p class="faq-q"><i data-lucide="hard-drive" class="inline-icon"></i> What if I clone the repo on a different laptop?</p>
+      <div class="faq-a">
+        <p>The clone has <code>encrypted/</code> but not <code>src/</code> (which is gitignored). You can view the site as a reader — type your password and read files — but you can't <em>add</em> new content until you also clone your local <code>src/</code> over by hand (or copy files in fresh). The encryption pipeline doesn't try to round-trip through git.</p>
+      </div>
+    </div>
+  </section>
 
 </main>
 
