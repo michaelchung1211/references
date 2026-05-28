@@ -6,17 +6,13 @@ layout: null
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Viewer</title>
+  <title>Loading…</title>
   <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
   <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
 </head>
 <body>
-<header>
-  <p><a href="{{ '/' | relative_url }}">&larr; back to index</a></p>
-  <h1 id="title">Loading&hellip;</h1>
-</header>
-<main id="content" class="markdown-body">Loading&hellip;</main>
+<main id="content" class="markdown-body">Loading…</main>
 
 <form id="unlock-form" hidden>
   <p class="muted">This file is encrypted. Enter the password for project <strong id="unlock-project"></strong>.</p>
@@ -39,7 +35,6 @@ layout: null
   const BASEURL = {{ site.baseurl | jsonify }};
   const params = new URLSearchParams(location.search);
   const content = document.getElementById('content');
-  const titleEl = document.getElementById('title');
   const unlockForm = document.getElementById('unlock-form');
   const unlockProjectEl = document.getElementById('unlock-project');
   const unlockErrorEl = document.getElementById('unlock-error');
@@ -53,10 +48,10 @@ layout: null
     await renderPlain(plainPath);
   } else {
     content.textContent = 'No path specified.';
-    titleEl.textContent = 'Viewer';
   }
 
-  // ---------- plaintext path (unchanged behavior) ----------
+  // ---------- plaintext path (markdown only — HTML/PDF plaintext files
+  // are linked directly from index.html, not through the viewer) ----------
   async function renderPlain(path) {
     const prefix = (BASEURL || '') + '/';
     if (path.indexOf(prefix) !== 0 && path.indexOf('/') !== 0) {
@@ -65,7 +60,6 @@ layout: null
     }
     const fileName = path.split('/').pop();
     document.title = fileName;
-    titleEl.textContent = fileName;
     try {
       const res = await fetch(path);
       if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
@@ -79,7 +73,6 @@ layout: null
   // ---------- encrypted path ----------
   async function renderEncrypted(blobName, projectName, type, name) {
     document.title = name || 'Encrypted';
-    titleEl.textContent = name || 'Encrypted file';
 
     const manifest = await loadManifest();
     if (!manifest) {
@@ -132,35 +125,32 @@ layout: null
 
   function renderDecrypted(bytes, file) {
     if (file.type === 'md') {
+      // Render markdown directly into the page — centered by the existing
+      // body > main { max-width: 760px } rule in assets/style.css.
       content.innerHTML = DOMPurify.sanitize(marked.parse(utf8Decode(bytes)));
-    } else if (file.type === 'pdf') {
-      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
-      content.innerHTML = '';
-      const iframe = document.createElement('iframe');
-      iframe.src = url;
-      iframe.style.width = '100%';
-      iframe.style.height = '85vh';
-      iframe.style.border = '0';
-      content.appendChild(iframe);
-    } else if (file.type === 'html') {
-      const url = URL.createObjectURL(new Blob([bytes], { type: 'text/html' }));
-      content.innerHTML = '';
-      const iframe = document.createElement('iframe');
-      iframe.src = url;
-      iframe.setAttribute('sandbox', 'allow-same-origin');
-      iframe.style.width = '100%';
-      iframe.style.height = '85vh';
-      iframe.style.border = '0';
-      content.appendChild(iframe);
-    } else {
-      const url = URL.createObjectURL(new Blob([bytes]));
-      content.innerHTML = '';
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = file.name;
-      a.textContent = 'Download ' + file.name;
-      content.appendChild(a);
+      return;
     }
+
+    if (file.type === 'pdf' || file.type === 'html') {
+      // Full-page view: hand the browser the decrypted bytes as a blob URL
+      // and navigate to it. The browser's built-in PDF viewer / HTML renderer
+      // takes over the whole tab — no iframe, no surrounding chrome.
+      // location.replace() avoids adding a history entry, so one Back press
+      // returns the user to where they came from.
+      const mime = file.type === 'pdf' ? 'application/pdf' : 'text/html';
+      const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+      location.replace(url);
+      return;
+    }
+
+    // Unknown type — offer a download.
+    const url = URL.createObjectURL(new Blob([bytes]));
+    content.innerHTML = '';
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    a.textContent = 'Download ' + file.name;
+    content.appendChild(a);
   }
 
   async function loadManifest() {
