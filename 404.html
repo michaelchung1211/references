@@ -1,0 +1,37 @@
+---
+layout: null
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Loading…</title>
+  <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
+  <script>
+    // GitHub Pages serves this file (with HTTP 404) for any unknown path.
+    // We hand the requested path to index.html via sessionStorage; the home
+    // page restores the URL with history.replaceState and either filters
+    // down to the matching project, or shows a "project not found" message.
+    // See architecture.html → "Clean project URLs" for the full picture.
+    (function () {
+      try {
+        sessionStorage.setItem(
+          'spa-redirect',
+          location.pathname + location.search + location.hash
+        );
+      } catch (_e) { /* sessionStorage disabled — fall through to plain redirect */ }
+      location.replace({{ "/" | relative_url | jsonify }});
+    })();
+  </script>
+</head>
+<body>
+  <header><h1>Loading…</h1></header>
+  <main>
+    <p class="muted">
+      If you are not redirected automatically,
+      <a href="{{ '/' | relative_url }}">go to the home page</a>.
+    </p>
+  </main>
+</body>
+</html>

@@ -9,6 +9,25 @@ layout: null
   <title>{{ site.title }}</title>
   <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    // Step 1 of the SPA-routing trick (see 404.html). If we arrived here via
+    // a 404 redirect, restore the original URL so the user keeps seeing
+    // /aproject in the address bar while the page is actually index.html.
+    // The router below then filters the listing to the matching project.
+    (function () {
+      try {
+        var redirect = sessionStorage.getItem('spa-redirect');
+        if (redirect) {
+          sessionStorage.removeItem('spa-redirect');
+          var baseurl = {{ site.baseurl | jsonify }} || '';
+          // Only restore if the redirect target stays inside this site.
+          if (redirect.indexOf(baseurl + '/') === 0 && redirect !== baseurl + '/') {
+            history.replaceState(null, '', redirect);
+          }
+        }
+      } catch (_e) {}
+    })();
+  </script>
 </head>
 <body>
 <header>
@@ -52,7 +71,7 @@ layout: null
 
   {% for topic in topics %}
     {% if topic == "" %}{% continue %}{% endif %}
-    <section>
+    <section data-project-name="{{ topic }}">
       <h2>{{ topic }}</h2>
       <ul>
         {% assign topic_files = refs | sort: "name" %}
@@ -104,6 +123,7 @@ layout: null
   const projects = manifest?.projects ?? [];
   for (const project of projects) {
     const section = document.createElement('section');
+    section.dataset.projectName = project.name;
     const h2 = document.createElement('h2');
     h2.textContent = project.name;
     if (project.private) {
@@ -253,6 +273,76 @@ layout: null
   }
 
   window.lucide?.createIcons();
+
+  // ---- Path-based router ----
+  // /            → show all sections (default)
+  // /aproject    → show only the section whose data-project-name === "aproject"
+  // /unknown     → hide all sections and show a "project not found" message
+  applyRoute();
+
+  function applyRoute() {
+    const baseurl = BASEURL || '';
+    let path = location.pathname;
+    if (baseurl && path.indexOf(baseurl) === 0) path = path.slice(baseurl.length);
+    // Strip leading/trailing slashes; we only care about the first segment.
+    const segments = path.split('/').filter(Boolean);
+    const main = document.querySelector('main');
+
+    // Remove any previous "not found" notice (so the router is re-runnable).
+    const oldNotice = main.querySelector('[data-router-notice]');
+    if (oldNotice) oldNotice.remove();
+
+    // Home page: show everything as before.
+    if (segments.length === 0) {
+      for (const s of main.querySelectorAll('section[data-project-name]')) {
+        s.hidden = false;
+      }
+      return;
+    }
+
+    const wanted = decodeURIComponent(segments[0]);
+    const sections = main.querySelectorAll('section[data-project-name]');
+    let matched = null;
+    for (const s of sections) {
+      if (s.dataset.projectName === wanted) {
+        matched = s;
+        s.hidden = false;
+      } else {
+        s.hidden = true;
+      }
+    }
+
+    if (matched) {
+      // Add a "back to all projects" link above the matched section.
+      const back = document.createElement('p');
+      back.dataset.routerNotice = 'back-link';
+      back.className = 'muted';
+      const a = document.createElement('a');
+      a.href = (baseurl || '') + '/';
+      a.textContent = '← all projects';
+      back.appendChild(a);
+      main.insertBefore(back, main.firstChild);
+    }
+
+    if (!matched) {
+      // Project not found — show a friendly inline 404.
+      const notice = document.createElement('section');
+      notice.dataset.routerNotice = 'not-found';
+      const h2 = document.createElement('h2');
+      h2.textContent = 'Project not found';
+      const p = document.createElement('p');
+      p.className = 'muted';
+      p.textContent = 'No project matches "' + wanted + '". Check the spelling, or ';
+      const a = document.createElement('a');
+      a.href = (baseurl || '') + '/';
+      a.textContent = 'see all projects';
+      p.appendChild(a);
+      p.appendChild(document.createTextNode('.'));
+      notice.appendChild(h2);
+      notice.appendChild(p);
+      main.appendChild(notice);
+    }
+  }
 </script>
 </body>
 </html>
