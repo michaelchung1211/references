@@ -9,26 +9,74 @@
   },
   "projects": [
     {
-      "name": "testmyproject",
-      "private": false,
+      "name": "companion",
+      "private": true,
       "files": [
         {
-          "path": "testmyproject/hii.html",
-          "name": "hii.html",
-          "publicHref": "testmyproject/hii.html",
+          "path": "companion/🎮 陪玩工作室完整規劃表.html",
+          "name": "🎮 陪玩工作室完整規劃表.html",
+          "blob": "companion/0bd8c7e0016cf8c3671ce36318476879.enc",
           "type": "html",
           "ext": "html",
-          "size": 5
+          "size": 34816
         },
         {
-          "path": "testmyproject/secondlayer/owo.html",
-          "name": "owo.html",
-          "publicHref": "testmyproject/secondlayer/owo.html",
+          "path": "companion/陪玩工作室 Discord 伺服器規劃指南.html",
+          "name": "陪玩工作室 Discord 伺服器規劃指南.html",
+          "blob": "companion/f387d0207132f47563a1ca444595a3ac.enc",
           "type": "html",
           "ext": "html",
-          "size": 11
+          "size": 21955
+        },
+        {
+          "path": "companion/summary.html",
+          "name": "summary.html",
+          "blob": "companion/65c891faec6b2d7e2fd51ae2eae82417.enc",
+          "type": "html",
+          "ext": "html",
+          "size": 32499
         }
-      ]
+      ],
+      "salt": "5CV2ccdI+azK4HIaWPNn9g=="
+    },
+    {
+      "name": "university_application",
+      "private": true,
+      "files": [
+        {
+          "path": "university_application/中山企管.pdf",
+          "name": "中山企管.pdf",
+          "blob": "university_application/46009929ae37c483b0ca1287fab82e36.enc",
+          "type": "pdf",
+          "ext": "pdf",
+          "size": 383092
+        },
+        {
+          "path": "university_application/元智資英.pdf",
+          "name": "元智資英.pdf",
+          "blob": "university_application/d73a5c6ee5fef5033a34e6c9c6d7c6d2.enc",
+          "type": "pdf",
+          "ext": "pdf",
+          "size": 160778
+        },
+        {
+          "path": "university_application/台北資工.pdf",
+          "name": "台北資工.pdf",
+          "blob": "university_application/03d53d6eb003a96cbd595627eeee1411.enc",
+          "type": "pdf",
+          "ext": "pdf",
+          "size": 197210
+        },
+        {
+          "path": "university_application/長庚智慧.pdf",
+          "name": "長庚智慧.pdf",
+          "blob": "university_application/7fd9cd62189bc83602e0cab179ed356f.enc",
+          "type": "pdf",
+          "ext": "pdf",
+          "size": 74416
+        }
+      ],
+      "salt": "1+5MMGqt5Pjv4oC7u5ux3Q=="
     }
   ]
 }
