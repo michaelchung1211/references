@@ -40,6 +40,20 @@
       "salt": "5CV2ccdI+azK4HIaWPNn9g=="
     },
     {
+      "name": "testing",
+      "private": false,
+      "files": [
+        {
+          "path": "testing/owo.html",
+          "name": "owo.html",
+          "publicHref": "testing/owo.html",
+          "type": "html",
+          "ext": "html",
+          "size": 197
+        }
+      ]
+    },
+    {
       "name": "university_application",
       "private": true,
       "files": [
@@ -78,7 +92,7 @@
       ],
       "title": "大學申請",
       "salt": "1+5MMGqt5Pjv4oC7u5ux3Q==",
-      "hintBlob": "AVPPgEpz9TLavAPFzlPcThz64FDAlVTkp43pIT+zRgNd+XH/Wgi32o4S+OOGip0="
+      "hintBlob": "AWZPVEgkB8xvox1E4n+wQO025kbHosNw6WsDMVdiUYqsWKUPF213qQr0SQt7Azo="
     }
   ]
 }
