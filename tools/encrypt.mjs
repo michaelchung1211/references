@@ -3,11 +3,19 @@
 //
 // Layout of src/:
 //   src/<project>/<...>/<file>.{md,html,pdf,...}
+//   src/<project>/config.json     (optional — { "title": "...", "hint": "..." })
 //
 // Each top-level subfolder under src/ is a "project". Per project, you set
 // either a password (→ files are AES-GCM encrypted with an Argon2id-derived
 // key) or no password (→ files are copied to encrypted/<project>/ as plain
 // bytes, served on GitHub as plaintext).
+//
+// The optional config.json carries display metadata:
+//   - title : human-readable name shown in place of the folder name
+//   - hint  : password hint. For private projects, the hint is encrypted with
+//             a key derived from the magic word "hint" + per-project salt and
+//             stored as `hintBlob` in the manifest. The page only reveals it
+//             after the visitor types "hint" as the password.
 //
 // The manifest at encrypted/manifest.json is PLAINTEXT — it just lists every
 // project, whether it's private, and (for private ones) the per-project salt.
@@ -178,8 +186,10 @@ async function main() {
     process.exit(1);
   }
 
-  // 1. Gather files, grouped by top-level project name.
-  const projects = new Map(); // name -> [{ absPath, relPath }]
+  // 1. Gather files, grouped by top-level project name. config.json is
+  //    treated as metadata (title/hint), not content — pulled aside here.
+  const projects = new Map();        // name -> [{ absPath, relPath }]
+  const projectConfigs = new Map();  // name -> { title?, hint? }
   for await (const abs of walk(SRC_DIR)) {
     const rel = path.relative(SRC_DIR, abs).split(path.sep).join('/');
     const segs = rel.split('/');
@@ -188,6 +198,18 @@ async function main() {
       continue;
     }
     const p = segs[0];
+    if (segs.length === 2 && segs[1] === 'config.json') {
+      try {
+        const cfg = JSON.parse(await readFile(abs, 'utf8'));
+        const clean = {};
+        if (typeof cfg.title === 'string' && cfg.title.trim() !== '') clean.title = cfg.title.trim();
+        if (typeof cfg.hint === 'string' && cfg.hint.trim() !== '') clean.hint = cfg.hint.trim();
+        projectConfigs.set(p, clean);
+      } catch (e) {
+        console.warn(`  warn: src/${rel} could not be parsed as JSON — ignoring. (${e.message})`);
+      }
+      continue; // never treat config.json as a content file
+    }
     if (!projects.has(p)) projects.set(p, []);
     projects.get(p).push({ absPath: abs, relPath: rel });
   }
@@ -306,29 +328,54 @@ async function main() {
     projects: [],
   };
 
-  // 5a. Carry over manifest entries for projects we didn't touch.
+  // 5a. Carry over manifest entries for projects we didn't touch. We DO still
+  //     refresh the title/hint from config.json so the user can fix a typo
+  //     without re-entering the file password — only the hint cipher (derived
+  //     from the magic word "hint" + existing salt) needs to be rebuilt.
   for (const name of skipped) {
     const prior = prevByName.get(name);
-    if (prior) {
-      manifest.projects.push(prior);
-    } else {
+    if (!prior) {
       console.warn(`  note: src/${name}/ exists but has no previous manifest entry and was not selected — it won't appear on the site until you encrypt it.`);
+      continue;
     }
+    const cfg = projectConfigs.get(name) || {};
+    const entry = { ...prior };
+    if (cfg.title) entry.title = cfg.title; else delete entry.title;
+    if (cfg.hint && entry.private && entry.salt) {
+      const salt = Buffer.from(entry.salt, 'base64');
+      const hintKey = await deriveKey('hint', salt);
+      const hintBlob = await encryptBlob(hintKey, new TextEncoder().encode(cfg.hint));
+      entry.hintBlob = Buffer.from(hintBlob).toString('base64');
+    } else {
+      delete entry.hintBlob;
+    }
+    manifest.projects.push(entry);
   }
 
   // 5b. Encrypt / copy the target projects.
   for (const name of targets) {
     const files = projects.get(name);
     const meta = projectMeta.get(name);
+    const cfg = projectConfigs.get(name) || {};
     const outProjDir = path.join(OUT_DIR, name);
     await mkdir(outProjDir, { recursive: true });
 
     const projectEntry = { name, private: meta.private, files: [] };
+    if (cfg.title) projectEntry.title = cfg.title;
 
     if (meta.private) {
       const salt = meta.salt instanceof Uint8Array ? meta.salt : new Uint8Array(meta.salt);
       const key = await deriveKey(meta.password, salt);
       projectEntry.salt = Buffer.from(salt).toString('base64');
+
+      // Encrypt the password hint (if any) with a key derived from the magic
+      // word "hint" + same salt. The plaintext hint never enters manifest.json.
+      // See architecture.html → "Hint reveal" for the threat model.
+      if (cfg.hint) {
+        const hintKey = await deriveKey('hint', salt);
+        const hintBlob = await encryptBlob(hintKey, new TextEncoder().encode(cfg.hint));
+        projectEntry.hintBlob = Buffer.from(hintBlob).toString('base64');
+      }
 
       for (const { absPath, relPath } of files) {
         const data = new Uint8Array(await readFile(absPath));
@@ -347,6 +394,9 @@ async function main() {
         console.log(`  [enc] ${relPath} -> encrypted/${name}/${blobName}`);
       }
     } else {
+      if (cfg.hint) {
+        console.warn(`  warn: src/${name}/config.json has a "hint" but the project is public — ignoring (no password to hint at).`);
+      }
       // Public: copy bytes verbatim.
       for (const { absPath, relPath } of files) {
         const data = await readFile(absPath);

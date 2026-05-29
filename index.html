@@ -125,7 +125,7 @@ layout: null
     const section = document.createElement('section');
     section.dataset.projectName = project.name;
     const h2 = document.createElement('h2');
-    h2.textContent = project.name;
+    h2.textContent = project.title || project.name;
     if (project.private) {
       h2.appendChild(document.createTextNode(' '));
       const icon = document.createElement('i');
@@ -225,6 +225,13 @@ layout: null
     });
 
     async function tryUnlock(pw, silent) {
+      // Magic word: typing "hint" doesn't try to unlock — it decrypts and
+      // shows the stored hint instead. The hint ciphertext lives in the
+      // manifest as `hintBlob`, encrypted with deriveKey("hint", salt).
+      if (pw === 'hint') {
+        await revealHint();
+        return;
+      }
       err.textContent = silent ? '' : 'Deriving key…';
       try {
         const salt = b64ToBytes(project.salt);
@@ -244,6 +251,34 @@ layout: null
       } catch (_e) {
         if (!silent) err.textContent = 'Wrong password — try again.';
         sessionStorage.removeItem('proj-pw:' + project.name);
+      }
+    }
+
+    async function revealHint() {
+      if (!project.hintBlob) {
+        err.textContent = 'No hint is set for this project.';
+        return;
+      }
+      err.textContent = 'Decrypting hint…';
+      try {
+        const salt = b64ToBytes(project.salt);
+        const hintKey = await deriveKey('hint', salt);
+        const hintBytes = b64ToBytes(project.hintBlob);
+        const plain = await decryptBlob(hintKey, hintBytes);
+        err.textContent = '';
+        // Create the reveal node on demand so the hint text never sits in
+        // the DOM before the magic word is typed.
+        let hintBox = section.querySelector('[data-hint-box]');
+        if (!hintBox) {
+          hintBox = document.createElement('p');
+          hintBox.dataset.hintBox = '';
+          hintBox.className = 'muted';
+          form.insertAdjacentElement('afterend', hintBox);
+        }
+        hintBox.textContent = 'Hint: ' + utf8Decode(plain);
+        input.value = '';
+      } catch (_e) {
+        err.textContent = 'Could not decrypt the hint (manifest may be out of date).';
       }
     }
 
@@ -287,13 +322,21 @@ layout: null
     // Strip leading/trailing slashes; we only care about the first segment.
     const segments = path.split('/').filter(Boolean);
     const main = document.querySelector('main');
+    const headerEl = document.querySelector('body > header');
+    const footerEl = document.querySelector('body > footer');
 
-    // Remove any previous "not found" notice (so the router is re-runnable).
-    const oldNotice = main.querySelector('[data-router-notice]');
-    if (oldNotice) oldNotice.remove();
+    // Remove any previous router-injected nodes (so this is re-runnable).
+    for (const n of main.querySelectorAll('[data-router-notice]')) n.remove();
+    for (const s of main.querySelectorAll('section[data-project-name]')) {
+      const sub = s.querySelector('[data-project-subtitle]');
+      if (sub) sub.remove();
+      s.removeAttribute('data-route-active');
+    }
 
-    // Home page: show everything as before.
+    // Home page: show everything (including header/footer) as before.
     if (segments.length === 0) {
+      if (headerEl) headerEl.hidden = false;
+      if (footerEl) footerEl.hidden = false;
       for (const s of main.querySelectorAll('section[data-project-name]')) {
         s.hidden = false;
       }
@@ -313,7 +356,20 @@ layout: null
     }
 
     if (matched) {
-      // Add a "back to all projects" link above the matched section.
+      // Per-project view: strip the site chrome, add the folder name as a
+      // small subtitle under the project's title.
+      if (headerEl) headerEl.hidden = true;
+      if (footerEl) footerEl.hidden = true;
+      matched.setAttribute('data-route-active', 'single');
+
+      const subtitle = document.createElement('p');
+      subtitle.dataset.projectSubtitle = '';
+      subtitle.className = 'muted project-subtitle';
+      subtitle.textContent = matched.dataset.projectName;
+      const h2 = matched.querySelector('h2');
+      if (h2) h2.insertAdjacentElement('afterend', subtitle);
+
+      // "Back to all projects" link, so the user can return without the header.
       const back = document.createElement('p');
       back.dataset.routerNotice = 'back-link';
       back.className = 'muted';
@@ -322,6 +378,10 @@ layout: null
       a.textContent = '← all projects';
       back.appendChild(a);
       main.insertBefore(back, main.firstChild);
+    } else {
+      // Project not found — keep the header/footer so the user has navigation.
+      if (headerEl) headerEl.hidden = false;
+      if (footerEl) footerEl.hidden = false;
     }
 
     if (!matched) {

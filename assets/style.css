@@ -56,6 +56,24 @@ h2 {
   padding-bottom: 0.35rem;
 }
 
+/* Per-project view: promote the project title to a real headline and
+   show the raw folder name as a small subtitle below it. */
+section[data-route-active="single"] > h2 {
+  margin: 1.5rem 0 0.15rem;
+  font-size: 1.85rem;
+  text-transform: none;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.project-subtitle {
+  margin: 0 0 1rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
 p { margin: 0.5rem 0; }
 .muted { color: var(--muted); }
 .empty { color: var(--muted); padding: 1rem 0; }
