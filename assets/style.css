@@ -163,6 +163,15 @@ a:hover { text-decoration: underline; }
 .vault.unlocked .vault-sub,
 .vault.public   .vault-sub  { color: rgba(78,124,96,0.65); }
 
+/* Right side of the vault head: pill + "open project page" link. */
+.vault-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
 .vault-pill {
   font-size: 0.62rem;
   letter-spacing: 0.06em;
@@ -173,9 +182,37 @@ a:hover { text-decoration: underline; }
   padding: 3px 10px;
   white-space: nowrap;
   flex-shrink: 0;
-  margin-top: 3px;
   transition: background 0.3s, color 0.3s, border-color 0.3s;
 }
+
+/* Small icon link to /<project> — opens the per-project view. */
+.vault-open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card-dark);
+  color: var(--mid);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.15s;
+}
+.vault-open:hover {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+.vault-open:active { transform: translateY(0); }
+.vault-open svg { width: 14px; height: 14px; display: block; }
+
+/* On the per-project view there's nowhere useful to navigate to —
+   the URL is already this project. Hide the link. */
+.vault[data-route-active="single"] .vault-open { display: none; }
 .vault.unlocked .vault-pill,
 .vault.public   .vault-pill {
   background: var(--green-bg);

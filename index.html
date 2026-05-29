@@ -88,7 +88,12 @@ layout: null
             <div class="vault-name">{{ topic }}</div>
             <div class="vault-sub">{{ topic_count }} file{% if topic_count != 1 %}s{% endif %} · public</div>
           </div>
-          <span class="vault-pill">Public</span>
+          <div class="vault-actions">
+            <span class="vault-pill">Public</span>
+            <a class="vault-open" href="{{ '/' | relative_url }}{{ topic | url_encode }}" aria-label="Open {{ topic }}" title="Open {{ topic }}">
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7 13L13 7M13 7H7M13 7V13" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+          </div>
         </div>
         <div class="file-list">
           {% assign sorted = topic_files | sort: "name" %}
@@ -231,11 +236,21 @@ layout: null
     subParts.push(project.private ? 'locked' : 'public');
     subEl.textContent = subParts.join(' · ');
     nameWrap.append(nameEl, subEl);
+
+    const actions = document.createElement('div');
+    actions.className = 'vault-actions';
     const pill = document.createElement('span');
     pill.className = 'vault-pill';
     pill.dataset.pillRole = 'status';
     pill.textContent = project.private ? 'Locked' : 'Public';
-    head.append(nameWrap, pill);
+    const openLink = document.createElement('a');
+    openLink.className = 'vault-open';
+    openLink.href = (BASEURL || '') + '/' + encodeURIComponent(project.name);
+    openLink.setAttribute('aria-label', 'Open ' + displayName);
+    openLink.title = 'Open ' + displayName;
+    openLink.innerHTML = '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M7 13L13 7M13 7H7M13 7V13" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    actions.append(pill, openLink);
+    head.append(nameWrap, actions);
     body.append(head);
 
     // ── public projects: just list the files ────────────
