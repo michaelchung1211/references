@@ -20,12 +20,13 @@ A full architecture walkthrough lives in [architecture.html](architecture.html) 
 references/
 ├── _config.yml             # Jekyll config
 ├── index.html              # the homepage (Jekyll renders it, then JS hydrates the manifest section)
-├── viewer.html             # renders one .md / .pdf / .html / encrypted blob
+├── 404.html                # SPA-style redirect for clean project URLs (e.g. /companion)
+├── viewer.html             # renders one .md (HTML/PDF blobs go full-page via blob URL)
 ├── architecture.html       # explainer page: how Pages, rendering, and encryption fit together
 ├── assets/system-diagram.svg  # the colored system diagram embedded at the top of architecture.html
 ├── crypto.js               # browser-side AES-GCM + Argon2id helpers
 ├── assets/style.css        # styling
-├── tools/encrypt.mjs       # Node CLI: reads src/, writes encrypted/
+├── tools/encrypt.mjs       # Node CLI: reads src/ (incl. optional config.json), writes encrypted/
 ├── src/                    # GITIGNORED. Your plaintext source for the encryption pipeline.
 └── encrypted/              # committed output: manifest.json + .enc blobs + public files
 ```
@@ -105,6 +106,26 @@ npm install                # installs hash-wasm for Argon2id
 
 Markdown files **do not need front matter** — they're rendered client-side by [viewer.html](viewer.html).
 
+### Per-project metadata (`config.json`)
+
+Each project can have an optional `src/<project>/config.json` carrying display metadata:
+
+```json
+{
+  "title": "Companion Studio",
+  "hint": "starts with m, 8 chars"
+}
+```
+
+Both fields are optional. The CLI treats `config.json` as metadata, not content — it's never encrypted or copied to `encrypted/`.
+
+- **`title`** — human-readable name shown in place of the raw folder name. On the home page the title (if set) replaces the folder name in the section header. On the project's own page (`/<folder>`) the title is shown big and the folder name appears as a small uppercase subtitle beneath it.
+- **`hint`** — only meaningful for **private** projects. At build time it's encrypted with a key derived from the magic word `"hint"` + the project's salt, and stored in `encrypted/manifest.json` as `hintBlob`. The visitor reveals it by typing `hint` as the password — the plaintext hint never sits in the page DOM beforehand. See [the threat model](#threat-model) for the security ceiling here.
+
+Editing `config.json` does **not** require re-entering the file password. `npm run encrypt` refreshes title/hint for every project on every run — even ones you didn't select for re-encryption — because the hint cipher only needs the magic word + existing salt, not the file password. Only changes to file content under the project need a full re-encrypt with the password.
+
+If a public project specifies a `hint`, the CLI warns and ignores it (there's no password to hint at).
+
 ### Deleting content
 
 Same workflow, mirrored:
@@ -122,12 +143,41 @@ Same workflow, mirrored:
 - Passwords are cached in the tab's `sessionStorage` only. Closing the tab clears them.
 - Each unlocked project shows a **Forget password** button that clears just that project's cached password (and re-shows the password form). Other unlocked projects stay open.
 
+### Clean project URLs (`/<project>`)
+
+Visiting `https://ref.ezcoder.ink/companion` shows only the `companion` project — no home-page chrome (header + footer are hidden), folder name displayed as a subtitle under the configured title. Mechanism (GitHub Pages doesn't do real server-side routing):
+
+1. The browser asks for `/companion`, GitHub Pages can't find a file → serves `404.html` with HTTP 404.
+2. `404.html` stashes the requested path in `sessionStorage` and bounces to `/`.
+3. `index.html` reads the stash, calls `history.replaceState` to restore `/companion` in the address bar, and the router filters the section list to just that project.
+4. An unknown path (e.g. `/typo`) still ends up at `index.html` but the router shows an inline "Project not found" notice.
+
+The same matcher is used for plaintext topic folders (e.g. `/git`) — both come from `data-project-name` on each `<section>`.
+
+### Viewer behavior (no frames)
+
+The viewer renders files **full-page**, no iframes:
+
+- **Markdown** (encrypted or plaintext): rendered into the body, centered at 760px — no header, no back link. Browser tab title shows the filename.
+- **PDF**: viewer decrypts the bytes, wraps them in a `blob:` URL, then `location.replace()` — the browser's native PDF viewer takes over the whole tab.
+- **HTML**: same `location.replace(blobUrl)` flow, so the HTML is rendered as the whole page with its full document context (scripts/styles run normally — flagged because the old version sandboxed it). The browser back button returns you to the project page in one press.
+
+### Revealing the hint
+
+Inside any private project's password form, typing `hint` short-circuits the unlock and reveals the project's hint instead. The text is decrypted client-side from `hintBlob` and inserted below the form on-demand — the hint is **not** rendered into the DOM before that. If the project has no hint in `config.json`, the form shows "No hint is set for this project." See [Per-project metadata](#per-project-metadata-configjson).
+
 ### Threat model
 
 - <img src="https://unpkg.com/lucide-static@latest/icons/check.svg" width="14" alt="yes"> Without a password, a private project is just ciphertext on a public URL.
 - <img src="https://unpkg.com/lucide-static@latest/icons/check.svg" width="14" alt="yes"> Argon2id (m=64 MB, t=3, p=1) makes offline brute-force expensive.
 - <img src="https://unpkg.com/lucide-static@latest/icons/x.svg" width="14" alt="no"> Cannot hide that *some* encrypted content exists, the number of files, project names, or approximate sizes.
 - <img src="https://unpkg.com/lucide-static@latest/icons/x.svg" width="14" alt="no"> Cannot help if your password is weak / leaked / your device is compromised.
+
+**Hint reveal (`config.json` → `hint`)** has a softer guarantee than file encryption:
+
+- <img src="https://unpkg.com/lucide-static@latest/icons/check.svg" width="14" alt="yes"> Not in the page DOM until the magic word is typed (Inspect Element reveals nothing).
+- <img src="https://unpkg.com/lucide-static@latest/icons/check.svg" width="14" alt="yes"> Not in `manifest.json` plaintext — only `hintBlob` ciphertext.
+- <img src="https://unpkg.com/lucide-static@latest/icons/x.svg" width="14" alt="no"> Defeatable by reading [index.html](index.html) to find the magic word `"hint"`, then re-running Argon2id + AES-GCM against the manifest's `hintBlob` + `salt`. On pure static GitHub Pages, the magic word is a shared secret embedded in your JS — this is the ceiling. Going further would require an off-static rate-limited endpoint.
 
 ### Rotating a password / changing privacy
 
@@ -162,10 +212,14 @@ Then open <http://localhost:4000/>.
 For a fuller walkthrough see [architecture.html](architecture.html). Short version:
 
 - `_config.yml` — Jekyll config. Excludes `src/`, `tools/`, `node_modules/`, the README, etc. so they aren't published.
-- `index.html` — has Jekyll front matter (`layout: null`) so Jekyll passes it through as-is. The Liquid block on top walks `site.static_files` to render any legacy plaintext topic folders. The `<script type="module">` block at the bottom fetches `encrypted/manifest.json` and hydrates a section per project (with a password form for private ones).
-- `viewer.html` — renders one file. If the URL has `?path=…` it's plaintext; if it has `?blob=…&project=…` it fetches the encrypted blob, derives the key via Argon2id, decrypts via AES-GCM, then renders.
-- `crypto.js` — shared AES-GCM + Argon2id helpers used by index + viewer. Mirrors what `tools/encrypt.mjs` does on the write side.
-- `tools/encrypt.mjs` — Node CLI. Reads `src/`, prompts per project, writes `encrypted/manifest.json` + per-project `.enc` blobs (or plain files for public projects).
-- `assets/style.css` — styling.
+- `index.html` — has Jekyll front matter (`layout: null`) so Jekyll passes it through as-is. Three things happen here, in order:
+  1. An inline script restores the URL from `sessionStorage` if we arrived via `404.html` (clean-URL routing).
+  2. The Liquid block walks `site.static_files` to render any legacy plaintext topic folders, tagging each `<section>` with `data-project-name`.
+  3. The `<script type="module">` block fetches `encrypted/manifest.json`, hydrates a section per project (using `project.title` if set; password form for private ones), then runs the path router to filter to a single project on `/<name>`.
+- `404.html` — minimal page Jekyll generates for unknown URLs. Captures the requested path into `sessionStorage` and bounces to `/` so the router can pick it up. Without this, GitHub Pages couldn't deliver `/<project>` URLs at all.
+- `viewer.html` — renders Markdown (plaintext or decrypted) inline, centered, with no chrome. For decrypted PDF / HTML it builds a `blob:` URL and calls `location.replace()`, handing the browser a full-page view of the file.
+- `crypto.js` — shared AES-GCM + Argon2id helpers used by index + viewer. Mirrors what `tools/encrypt.mjs` does on the write side. The hint reveal uses the same `deriveKey` / `decryptBlob` primitives, just with the magic word `"hint"` as the input password.
+- `tools/encrypt.mjs` — Node CLI. Reads `src/` (pulling each `config.json` aside as metadata), prompts per project, writes `encrypted/manifest.json` (with `title` plain and `hintBlob` ciphertext per project) + per-project `.enc` blobs (or plain files for public projects). Title/hint refresh runs for every project on every build, no password needed for that.
+- `assets/style.css` — styling. The per-project view's title is promoted to a big headline via `section[data-route-active="single"] > h2`.
 
 PDFs and HTML files link directly (the browser handles them). Markdown is routed through the viewer.

@@ -7,6 +7,9 @@ layout: null
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Loading…</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
   <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
@@ -14,14 +17,33 @@ layout: null
 <body>
 <main id="content" class="markdown-body">Loading…</main>
 
-<form id="unlock-form" hidden>
-  <p class="muted">This file is encrypted. Enter the password for project <strong id="unlock-project"></strong>.</p>
-  <label>
-    Password:
-    <input id="unlock-pw" type="password" autocomplete="current-password" required>
-  </label>
-  <button type="submit">Unlock</button>
-  <div id="unlock-error" class="muted" role="alert"></div>
+<form id="unlock-form" class="container" hidden>
+  <section class="vault">
+    <div class="vault-bar"></div>
+    <div class="vault-body">
+      <div class="vault-head">
+        <div>
+          <div class="vault-name" id="unlock-project">Encrypted</div>
+          <div class="vault-sub">Enter the project password to view this file.</div>
+        </div>
+        <span class="vault-pill">Locked</span>
+      </div>
+      <div class="pw-label">Password</div>
+      <div class="pw-row">
+        <div class="pw-wrap">
+          <input id="unlock-pw" class="pw-input" type="password" placeholder="Enter password…" autocomplete="current-password" required>
+          <button type="button" class="pw-toggle" id="unlock-toggle" aria-label="Show password">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M2 10s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6z" stroke="currentColor" stroke-width="1.5"/>
+              <circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+          </button>
+        </div>
+        <button type="submit" class="btn-unlock">Unlock</button>
+      </div>
+      <div id="unlock-error" class="status-msg" role="alert"></div>
+    </div>
+  </section>
 </form>
 
 <script type="module">
@@ -38,6 +60,18 @@ layout: null
   const unlockForm = document.getElementById('unlock-form');
   const unlockProjectEl = document.getElementById('unlock-project');
   const unlockErrorEl = document.getElementById('unlock-error');
+  const unlockInput = document.getElementById('unlock-pw');
+  const unlockToggle = document.getElementById('unlock-toggle');
+
+  // Eye toggle for the password field.
+  unlockToggle.addEventListener('click', () => {
+    unlockInput.type = unlockInput.type === 'password' ? 'text' : 'password';
+  });
+
+  function setUnlockStatus(kind, msg) {
+    unlockErrorEl.className = 'status-msg' + (kind ? ' ' + kind : '');
+    unlockErrorEl.textContent = msg;
+  }
 
   const encBlob = params.get('blob');
   const plainPath = params.get('path');
@@ -105,7 +139,7 @@ layout: null
     let cachedPw = sessionStorage.getItem(sessionKey);
 
     while (true) {
-      let pw = cachedPw || (await promptForProjectPassword(project.name));
+      let pw = cachedPw || (await promptForProjectPassword(project.title || project.name));
       if (!pw) { content.textContent = 'Cancelled.'; return; }
       content.textContent = 'Decrypting…';
       try {
@@ -118,25 +152,27 @@ layout: null
       } catch (_e) {
         sessionStorage.removeItem(sessionKey);
         cachedPw = null;
-        unlockErrorEl.textContent = 'Wrong password — try again.';
+        setUnlockStatus('error', 'Incorrect password — try again.');
+        unlockInput.classList.remove('error'); void unlockInput.offsetWidth;
+        unlockInput.classList.add('error');
+        setTimeout(() => unlockInput.classList.remove('error'), 420);
       }
     }
   }
 
   function renderDecrypted(bytes, file) {
     if (file.type === 'md') {
-      // Render markdown directly into the page — centered by the existing
-      // body > main { max-width: 760px } rule in assets/style.css.
+      // Render markdown directly into the page — the .markdown-body styles in
+      // assets/style.css give it max-width 720px and centered typography.
       content.innerHTML = DOMPurify.sanitize(marked.parse(utf8Decode(bytes)));
       return;
     }
 
     if (file.type === 'pdf' || file.type === 'html') {
-      // Full-page view: hand the browser the decrypted bytes as a blob URL
-      // and navigate to it. The browser's built-in PDF viewer / HTML renderer
-      // takes over the whole tab — no iframe, no surrounding chrome.
-      // location.replace() avoids adding a history entry, so one Back press
-      // returns the user to where they came from.
+      // Hand the browser the decrypted bytes as a blob URL and navigate to
+      // it. The browser's built-in PDF viewer / HTML renderer takes over the
+      // whole tab — no iframe, no surrounding chrome. location.replace()
+      // keeps the history stack clean: one Back returns to the project page.
       const mime = file.type === 'pdf' ? 'application/pdf' : 'text/html';
       const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
       location.replace(url);
@@ -150,6 +186,7 @@ layout: null
     a.href = url;
     a.download = file.name;
     a.textContent = 'Download ' + file.name;
+    a.className = 'footer-link';
     content.appendChild(a);
   }
 
@@ -161,15 +198,17 @@ layout: null
     } catch { return null; }
   }
 
-  function promptForProjectPassword(project) {
+  function promptForProjectPassword(projectLabel) {
     return new Promise((resolve) => {
-      unlockProjectEl.textContent = project;
+      unlockProjectEl.textContent = projectLabel;
       unlockForm.hidden = false;
-      unlockErrorEl.textContent = '';
+      setUnlockStatus('', '');
       content.textContent = '';
+      unlockInput.value = '';
+      unlockInput.focus();
       const submit = (e) => {
         e.preventDefault();
-        const pw = document.getElementById('unlock-pw').value;
+        const pw = unlockInput.value;
         unlockForm.removeEventListener('submit', submit);
         resolve(pw);
       };

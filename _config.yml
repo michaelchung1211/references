@@ -32,6 +32,7 @@ exclude:
   - package-lock.json
   - tools
   - src
+  - example.html      # design reference, not published
 
 # Note: encrypted/ is intentionally NOT excluded — GitHub Pages must serve
 # the ciphertext blobs, the public files, and manifest.json. The auto-index

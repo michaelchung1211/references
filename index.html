@@ -7,20 +7,20 @@ layout: null
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ site.title }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
-  <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     // Step 1 of the SPA-routing trick (see 404.html). If we arrived here via
     // a 404 redirect, restore the original URL so the user keeps seeing
     // /aproject in the address bar while the page is actually index.html.
-    // The router below then filters the listing to the matching project.
     (function () {
       try {
         var redirect = sessionStorage.getItem('spa-redirect');
         if (redirect) {
           sessionStorage.removeItem('spa-redirect');
           var baseurl = {{ site.baseurl | jsonify }} || '';
-          // Only restore if the redirect target stays inside this site.
           if (redirect.indexOf(baseurl + '/') === 0 && redirect !== baseurl + '/') {
             history.replaceState(null, '', redirect);
           }
@@ -30,16 +30,22 @@ layout: null
   </script>
 </head>
 <body>
-<header>
+<div class="container">
+
+<header class="header">
+  <div class="header-eyebrow">
+    <div class="eyebrow-rule"></div>
+    <span class="eyebrow-text">Personal archive</span>
+  </div>
   <h1>{{ site.title }}</h1>
-  <p class="muted">{{ site.description }}</p>
+  <p>{{ site.description }}</p>
 </header>
 
-<main>
+<main id="main">
 {% comment %}
-  ---- Plaintext topic folders (existing behavior, e.g. git/, companion/) ----
-  These are files committed directly under topic folders at the project root.
-  /encrypted/* is filtered out — those are handled by the manifest-driven UI below.
+  ---- Plaintext topic folders (e.g. git/, databases/) ----
+  Files committed directly under top-level folders at the repo root.
+  /encrypted/* is filtered out — handled by the manifest-driven JS below.
 {% endcomment %}
 {% assign md_files       = site.static_files | where: "extname", ".md" %}
 {% assign markdown_files = site.static_files | where: "extname", ".markdown" %}
@@ -60,39 +66,53 @@ layout: null
   {% for f in refs %}
     {% assign clean = f.path | remove_first: "/" %}
     {% assign segments = clean | split: "/" %}
-    {% if segments.size > 1 %}
-      {% assign t = segments[0] %}
-    {% else %}
-      {% assign t = "(root)" %}
-    {% endif %}
-    {% assign all_topics = all_topics | push: t %}
+    {% if segments.size > 1 %}{% assign t = segments[0] %}{% else %}{% assign t = "" %}{% endif %}
+    {% if t != "" %}{% assign all_topics = all_topics | push: t %}{% endif %}
   {% endfor %}
   {% assign topics = all_topics | uniq | sort %}
 
   {% for topic in topics %}
-    {% if topic == "" %}{% continue %}{% endif %}
-    <section data-project-name="{{ topic }}">
-      <h2>{{ topic }}</h2>
-      <ul>
-        {% assign topic_files = refs | sort: "name" %}
-        {% for f in topic_files %}
-          {% assign clean = f.path | remove_first: "/" %}
-          {% assign segments = clean | split: "/" %}
-          {% if segments.size > 1 %}
-            {% assign f_topic = segments[0] %}
-          {% else %}
-            {% assign f_topic = "(root)" %}
-          {% endif %}
-          {% if f_topic == topic %}
+    {% comment %} Collect just this topic's files so we can show a count. {% endcomment %}
+    {% assign topic_files = "" | split: "" %}
+    {% for f in refs %}
+      {% assign clean = f.path | remove_first: "/" %}
+      {% assign segments = clean | split: "/" %}
+      {% if segments[0] == topic %}{% assign topic_files = topic_files | push: f %}{% endif %}
+    {% endfor %}
+    {% assign topic_count = topic_files | size %}
+    <section class="vault public" data-project-name="{{ topic }}">
+      <div class="vault-bar"></div>
+      <div class="vault-body">
+        <div class="vault-head">
+          <div>
+            <div class="vault-name">{{ topic }}</div>
+            <div class="vault-sub">{{ topic_count }} file{% if topic_count != 1 %}s{% endif %} · public</div>
+          </div>
+          <span class="vault-pill">Public</span>
+        </div>
+        <div class="file-list">
+          {% assign sorted = topic_files | sort: "name" %}
+          {% for f in sorted %}
             {% assign ext = f.extname | remove_first: "." | downcase %}
+            {% assign chip = ext %}
+            {% if ext == "markdown" %}{% assign chip = "md" %}{% endif %}
+            {% if ext == "htm" %}{% assign chip = "html" %}{% endif %}
             {% if ext == "md" or ext == "markdown" %}
-              <li><a href="{{ '/viewer.html' | relative_url }}?path={{ f.path | relative_url | url_encode }}">{{ f.name }}</a> <span class="tag">md</span></li>
+              <a class="file-item" href="{{ '/viewer.html' | relative_url }}?path={{ f.path | relative_url | url_encode }}">
+                <span class="file-chip chip-{{ chip }}">{{ chip }}</span>
+                <span class="file-name">{{ f.name }}</span>
+                <span class="file-arrow">→</span>
+              </a>
             {% else %}
-              <li><a href="{{ f.path | relative_url }}">{{ f.name }}</a> <span class="tag">{{ ext }}</span></li>
+              <a class="file-item" href="{{ f.path | relative_url }}">
+                <span class="file-chip chip-{{ chip }}">{{ chip }}</span>
+                <span class="file-name">{{ f.name }}</span>
+                <span class="file-arrow">→</span>
+              </a>
             {% endif %}
-          {% endif %}
-        {% endfor %}
-      </ul>
+          {% endfor %}
+        </div>
+      </div>
     </section>
   {% endfor %}
 {% endif %}
@@ -100,13 +120,22 @@ layout: null
 <div id="manifest-root"></div>
 </main>
 
-<footer>
-  <p class="muted">
-    <a href="https://github.com/michaelchung1211/references">Github link</a>
-    &nbsp;·&nbsp;
-    <a href="{{ '/architecture.html' | relative_url }}">How it works</a>
-  </p>
+<footer class="footer">
+  <div class="footer-info">
+    <div class="footer-desc">{{ site.description }}</div>
+    <div class="footer-meta">Personal archive · static site on GitHub Pages</div>
+  </div>
+  <div class="footer-links">
+    <a class="footer-link" href="https://github.com/michaelchung1211/references">
+      <svg width="12" height="12" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M10 2C5.58 2 2 5.58 2 10c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0018 10c0-4.42-3.58-8-8-8z" fill="currentColor"/>
+      </svg>
+      Github
+    </a>
+  </div>
 </footer>
+
+</div><!-- /.container -->
 
 <script type="module">
   import { deriveKey, decryptBlob, utf8Decode, b64ToBytes } from '{{ "/crypto.js" | relative_url }}';
@@ -114,226 +143,319 @@ layout: null
   const BASEURL = {{ site.baseurl | jsonify }};
   const root = document.getElementById('manifest-root');
 
+  // Inline SVGs (lucide-style) — avoids loading the lucide library.
+  const EYE_SVG = `<svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M2 10s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6z" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/></svg>`;
+  const EYE_OFF_SVG = `<svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 3l14 14M9.5 5.08A8.2 8.2 0 0110 5c5 0 8 5 8 5a13.16 13.16 0 01-1.67 2.3M6.61 6.61A13.526 13.526 0 002 10s3 5 8 5a7.7 7.7 0 003.39-.74M7.88 7.88a3 3 0 104.24 4.24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
   let manifest = null;
   try {
     const res = await fetch((BASEURL || '') + '/encrypted/manifest.json');
     if (res.ok) manifest = await res.json();
-  } catch (_e) { /* no src/ content yet — nothing to show */ }
+  } catch (_e) { /* no manifest yet — nothing to show */ }
 
   const projects = manifest?.projects ?? [];
   for (const project of projects) {
+    renderProject(project);
+  }
+
+  // ---- Path-based router ----
+  // /            → show all vaults
+  // /aproject    → show only the matching vault, hide header/footer
+  // /unknown     → keep header/footer, show "Project not found" notice
+  applyRoute();
+
+  // ---- helpers ----
+
+  function fileWord(n) { return n === 1 ? 'file' : 'files'; }
+
+  function chipClassFor(file) {
+    const type = (file.type || '').toLowerCase();
+    if (type === 'md' || type === 'pdf' || type === 'html') return 'chip-' + type;
+    return ''; // default chip styling
+  }
+  function chipTextFor(file) {
+    const type = (file.type || '').toLowerCase();
+    if (type === 'md' || type === 'pdf' || type === 'html') return type;
+    return file.ext || type || 'file';
+  }
+
+  function makeFileItem(href, fileObj) {
+    const a = document.createElement('a');
+    a.className = 'file-item';
+    a.href = href;
+
+    const chip = document.createElement('span');
+    chip.className = 'file-chip ' + chipClassFor(fileObj);
+    chip.textContent = chipTextFor(fileObj);
+
+    const name = document.createElement('span');
+    name.className = 'file-name';
+    name.textContent = fileObj.name;
+
+    const arrow = document.createElement('span');
+    arrow.className = 'file-arrow';
+    arrow.textContent = '→';
+
+    a.append(chip, name, arrow);
+    return a;
+  }
+
+  function renderProject(project) {
+    const displayName = project.title || project.name;
+    const distinctFolder = displayName !== project.name;
+    const count = project.files.length;
+
     const section = document.createElement('section');
+    section.className = 'vault' + (project.private ? '' : ' public');
     section.dataset.projectName = project.name;
-    const h2 = document.createElement('h2');
-    h2.textContent = project.title || project.name;
-    if (project.private) {
-      h2.appendChild(document.createTextNode(' '));
-      const icon = document.createElement('i');
-      icon.setAttribute('data-lucide', 'lock');
-      icon.className = 'inline-icon';
-      h2.appendChild(icon);
-    }
-    section.appendChild(h2);
 
+    const bar = document.createElement('div');
+    bar.className = 'vault-bar';
+    const body = document.createElement('div');
+    body.className = 'vault-body';
+    section.append(bar, body);
+
+    // ── head ─────────────────────────────────────────────
+    const head = document.createElement('div');
+    head.className = 'vault-head';
+    const nameWrap = document.createElement('div');
+    const nameEl = document.createElement('div');
+    nameEl.className = 'vault-name';
+    nameEl.textContent = displayName;
+    const subEl = document.createElement('div');
+    subEl.className = 'vault-sub';
+    subEl.dataset.subRole = 'meta';
+    const subParts = [];
+    if (distinctFolder) subParts.push(project.name);
+    subParts.push(`${count} ${project.private ? 'encrypted ' : ''}${fileWord(count)}`);
+    subParts.push(project.private ? 'locked' : 'public');
+    subEl.textContent = subParts.join(' · ');
+    nameWrap.append(nameEl, subEl);
+    const pill = document.createElement('span');
+    pill.className = 'vault-pill';
+    pill.dataset.pillRole = 'status';
+    pill.textContent = project.private ? 'Locked' : 'Public';
+    head.append(nameWrap, pill);
+    body.append(head);
+
+    // ── public projects: just list the files ────────────
     if (!project.private) {
-      const ul = document.createElement('ul');
+      const list = document.createElement('div');
+      list.className = 'file-list';
       for (const f of project.files) {
-        const li = document.createElement('li');
-        const a = document.createElement('a');
-        if (f.type === 'md') {
-          a.href = (BASEURL || '') + '/viewer.html?path=' + encodeURIComponent('/encrypted/' + f.publicHref);
-        } else {
-          a.href = (BASEURL || '') + '/encrypted/' + f.publicHref;
-        }
-        a.textContent = f.name;
-        const tag = document.createElement('span');
-        tag.className = 'tag';
-        tag.textContent = f.ext || f.type;
-        li.appendChild(a);
-        li.appendChild(document.createTextNode(' '));
-        li.appendChild(tag);
-        ul.appendChild(li);
+        list.append(makeFileItem((BASEURL || '') + '/encrypted/' + f.publicHref, f));
       }
-      section.appendChild(ul);
-      root.appendChild(section);
-      continue;
+      body.append(list);
+      root.append(section);
+      return;
     }
 
-    // Private project: render password form + (initially hidden) file list.
-    const desc = document.createElement('p');
-    desc.className = 'muted';
-    desc.textContent = `${project.files.length} encrypted file(s). Enter the password for "${project.name}" to unlock.`;
-    section.appendChild(desc);
+    // ── private projects: password UI + (hidden) file list ─
+    const label = document.createElement('div');
+    label.className = 'pw-label';
+    label.textContent = 'Password';
 
-    const form = document.createElement('form');
-    const label = document.createElement('label');
-    label.textContent = 'Password: ';
+    const row = document.createElement('div');
+    row.className = 'pw-row';
+    const wrap = document.createElement('div');
+    wrap.className = 'pw-wrap';
     const input = document.createElement('input');
+    input.className = 'pw-input';
     input.type = 'password';
+    input.placeholder = 'Enter password…';
     input.autocomplete = 'current-password';
-    input.required = true;
-    label.appendChild(input);
-    form.appendChild(label);
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'pw-toggle';
+    toggle.setAttribute('aria-label', 'Show password');
+    toggle.innerHTML = EYE_SVG;
+    toggle.addEventListener('click', () => {
+      if (input.type === 'password') {
+        input.type = 'text';
+        toggle.innerHTML = EYE_OFF_SVG;
+        toggle.setAttribute('aria-label', 'Hide password');
+      } else {
+        input.type = 'password';
+        toggle.innerHTML = EYE_SVG;
+        toggle.setAttribute('aria-label', 'Show password');
+      }
+    });
+    wrap.append(input, toggle);
     const btn = document.createElement('button');
-    btn.type = 'submit';
+    btn.type = 'button';
+    btn.className = 'btn-unlock';
     btn.textContent = 'Unlock';
-    form.appendChild(document.createTextNode(' '));
-    form.appendChild(btn);
-    const err = document.createElement('div');
-    err.className = 'muted';
-    err.setAttribute('role', 'alert');
-    form.appendChild(err);
-    section.appendChild(form);
+    row.append(wrap, btn);
 
-    const fileList = document.createElement('ul');
-    fileList.hidden = true;
-    section.appendChild(fileList);
-
+    const forgetRow = document.createElement('div');
+    forgetRow.className = 'btn-forget-row';
     const forgetBtn = document.createElement('button');
     forgetBtn.type = 'button';
-    forgetBtn.className = 'forget-btn';
-    forgetBtn.hidden = true;
-    const forgetIcon = document.createElement('i');
-    forgetIcon.setAttribute('data-lucide', 'lock');
-    forgetIcon.className = 'inline-icon';
-    forgetBtn.appendChild(forgetIcon);
-    forgetBtn.appendChild(document.createTextNode(' Forget password'));
+    forgetBtn.className = 'btn-forget';
+    forgetBtn.textContent = 'Forgot password?';
     forgetBtn.addEventListener('click', () => {
+      // The "forget" pattern: clear cached pw and reset the unlocked UI so the
+      // user can re-enter the password (or use the hint trigger).
       sessionStorage.removeItem('proj-pw:' + project.name);
-      fileList.hidden = true;
-      fileList.innerHTML = '';
-      form.hidden = false;
-      desc.hidden = false;
-      forgetBtn.hidden = true;
+      section.classList.remove('unlocked');
+      pill.textContent = 'Locked';
+      updateSubMeta('locked');
+      // Wipe the rendered file list — re-rendered on next successful unlock.
+      const fl = body.querySelector('.file-list');
+      if (fl) fl.remove();
+      const hb = body.querySelector('[data-hint-box]');
+      if (hb) hb.remove();
       input.value = '';
-      err.textContent = '';
+      setStatus('', '');
       input.focus();
     });
-    section.appendChild(forgetBtn);
+    forgetRow.append(forgetBtn);
 
-    root.appendChild(section);
+    const status = document.createElement('div');
+    status.className = 'status-msg';
 
-    // Restore from session if we already unlocked this project this tab.
-    const cachedPw = sessionStorage.getItem('proj-pw:' + project.name);
-    if (cachedPw) {
-      tryUnlock(cachedPw, /*silent*/ true);
+    body.append(label, row, forgetRow, status);
+    root.append(section);
+
+    function setStatus(kind, msg) {
+      status.className = 'status-msg' + (kind ? ' ' + kind : '');
+      status.textContent = msg;
     }
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      await tryUnlock(input.value, false);
-    });
-
-    async function tryUnlock(pw, silent) {
-      // Magic word: typing "hint" doesn't try to unlock — it decrypts and
-      // shows the stored hint instead. The hint ciphertext lives in the
-      // manifest as `hintBlob`, encrypted with deriveKey("hint", salt).
-      if (pw === 'hint') {
-        await revealHint();
-        return;
-      }
-      err.textContent = silent ? '' : 'Deriving key…';
-      try {
-        const salt = b64ToBytes(project.salt);
-        const key = await deriveKey(pw, salt);
-        // Verify by trying to decrypt the first file's header.
-        const first = project.files[0];
-        const blobBytes = new Uint8Array(
-          await (await fetch((BASEURL || '') + '/encrypted/' + first.blob)).arrayBuffer()
-        );
-        await decryptBlob(key, blobBytes); // throws on wrong password
-        sessionStorage.setItem('proj-pw:' + project.name, pw);
-        form.hidden = true;
-        desc.hidden = true;
-        err.textContent = '';
-        forgetBtn.hidden = false;
-        renderFiles();
-      } catch (_e) {
-        if (!silent) err.textContent = 'Wrong password — try again.';
-        sessionStorage.removeItem('proj-pw:' + project.name);
-      }
+    function updateSubMeta(stateWord) {
+      const parts = [];
+      if (distinctFolder) parts.push(project.name);
+      parts.push(`${count} encrypted ${fileWord(count)}`);
+      parts.push(stateWord);
+      subEl.textContent = parts.join(' · ');
     }
 
-    async function revealHint() {
-      if (!project.hintBlob) {
-        err.textContent = 'No hint is set for this project.';
-        return;
-      }
-      err.textContent = 'Decrypting hint…';
-      try {
-        const salt = b64ToBytes(project.salt);
-        const hintKey = await deriveKey('hint', salt);
-        const hintBytes = b64ToBytes(project.hintBlob);
-        const plain = await decryptBlob(hintKey, hintBytes);
-        err.textContent = '';
-        // Create the reveal node on demand so the hint text never sits in
-        // the DOM before the magic word is typed.
-        let hintBox = section.querySelector('[data-hint-box]');
-        if (!hintBox) {
-          hintBox = document.createElement('p');
-          hintBox.dataset.hintBox = '';
-          hintBox.className = 'muted';
-          form.insertAdjacentElement('afterend', hintBox);
-        }
-        hintBox.textContent = 'Hint: ' + utf8Decode(plain);
-        input.value = '';
-      } catch (_e) {
-        err.textContent = 'Could not decrypt the hint (manifest may be out of date).';
-      }
+    function markUnlocked() {
+      section.classList.add('unlocked');
+      pill.textContent = 'Unlocked';
+      updateSubMeta('unlocked');
+      setStatus('ok', 'Vault opened.');
     }
 
-    function renderFiles() {
-      fileList.hidden = false;
-      fileList.innerHTML = '';
+    function renderFileList() {
+      // Re-create the list so subsequent unlocks always reflect manifest state.
+      const existing = body.querySelector('.file-list');
+      if (existing) existing.remove();
+      const list = document.createElement('div');
+      list.className = 'file-list';
       for (const f of project.files) {
-        const li = document.createElement('li');
-        const a = document.createElement('a');
         const params = new URLSearchParams({
           blob: f.blob,
           project: project.name,
           type: f.type,
           name: f.name,
         });
-        a.href = (BASEURL || '') + '/viewer.html?' + params.toString();
-        a.textContent = f.name;
-        const tag = document.createElement('span');
-        tag.className = 'tag';
-        tag.textContent = f.ext || f.type;
-        li.appendChild(a);
-        li.appendChild(document.createTextNode(' '));
-        li.appendChild(tag);
-        fileList.appendChild(li);
+        const href = (BASEURL || '') + '/viewer.html?' + params.toString();
+        list.append(makeFileItem(href, f));
+      }
+      body.append(list);
+    }
+
+    async function tryUnlock(pw, silent) {
+      // Magic word: type "hint" → reveal hint instead of attempting unlock.
+      if (pw === 'hint') {
+        await revealHint();
+        return;
+      }
+      if (!silent) setStatus('', 'Deriving key…');
+      const origLabel = btn.textContent;
+      btn.textContent = '…';
+      btn.style.opacity = '0.45';
+      try {
+        const salt = b64ToBytes(project.salt);
+        const key = await deriveKey(pw, salt);
+        const first = project.files[0];
+        const blobBytes = new Uint8Array(
+          await (await fetch((BASEURL || '') + '/encrypted/' + first.blob)).arrayBuffer()
+        );
+        await decryptBlob(key, blobBytes); // throws on wrong password
+        sessionStorage.setItem('proj-pw:' + project.name, pw);
+        renderFileList();
+        markUnlocked();
+      } catch (_e) {
+        if (!silent) {
+          setStatus('error', 'Incorrect password — try again.');
+          input.classList.remove('error'); void input.offsetWidth;
+          input.classList.add('error');
+          setTimeout(() => input.classList.remove('error'), 420);
+        }
+        sessionStorage.removeItem('proj-pw:' + project.name);
+      } finally {
+        btn.textContent = origLabel;
+        btn.style.opacity = '1';
       }
     }
+
+    async function revealHint() {
+      if (!project.hintBlob) {
+        setStatus('error', 'No hint is set for this project.');
+        return;
+      }
+      setStatus('', 'Decrypting hint…');
+      try {
+        const salt = b64ToBytes(project.salt);
+        const hintKey = await deriveKey('hint', salt);
+        const hintBytes = b64ToBytes(project.hintBlob);
+        const plain = await decryptBlob(hintKey, hintBytes);
+        setStatus('', '');
+        let hintBox = body.querySelector('[data-hint-box]');
+        if (!hintBox) {
+          hintBox = document.createElement('div');
+          hintBox.className = 'hint';
+          hintBox.dataset.hintBox = '';
+          const mark = document.createElement('span');
+          mark.className = 'hint-mark';
+          mark.textContent = 'hint';
+          const text = document.createElement('span');
+          text.dataset.hintText = '';
+          hintBox.append(mark, text);
+          // Insert above the password label.
+          body.insertBefore(hintBox, label);
+        }
+        hintBox.querySelector('[data-hint-text]').textContent = utf8Decode(plain);
+        input.value = '';
+      } catch (_e) {
+        setStatus('error', 'Could not decrypt the hint (manifest may be out of date).');
+      }
+    }
+
+    btn.addEventListener('click', () => tryUnlock(input.value, false));
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); btn.click(); }
+    });
+
+    // Restore from session if we already unlocked this project this tab.
+    const cachedPw = sessionStorage.getItem('proj-pw:' + project.name);
+    if (cachedPw) tryUnlock(cachedPw, /*silent*/ true);
   }
 
-  window.lucide?.createIcons();
-
   // ---- Path-based router ----
-  // /            → show all sections (default)
-  // /aproject    → show only the section whose data-project-name === "aproject"
-  // /unknown     → hide all sections and show a "project not found" message
-  applyRoute();
 
   function applyRoute() {
     const baseurl = BASEURL || '';
     let path = location.pathname;
     if (baseurl && path.indexOf(baseurl) === 0) path = path.slice(baseurl.length);
-    // Strip leading/trailing slashes; we only care about the first segment.
     const segments = path.split('/').filter(Boolean);
-    const main = document.querySelector('main');
-    const headerEl = document.querySelector('body > header');
-    const footerEl = document.querySelector('body > footer');
 
-    // Remove any previous router-injected nodes (so this is re-runnable).
-    for (const n of main.querySelectorAll('[data-router-notice]')) n.remove();
+    const main = document.getElementById('main');
+    const container = document.querySelector('.container');
+    const headerEl = container.querySelector('.header');
+    const footerEl = container.querySelector('.footer');
+
+    // Reset router-injected state so the function is re-runnable.
+    for (const n of container.querySelectorAll('[data-router-notice]')) n.remove();
     for (const s of main.querySelectorAll('section[data-project-name]')) {
-      const sub = s.querySelector('[data-project-subtitle]');
-      if (sub) sub.remove();
       s.removeAttribute('data-route-active');
     }
+    const oldNotFound = main.querySelector('[data-not-found]');
+    if (oldNotFound) oldNotFound.remove();
 
-    // Home page: show everything (including header/footer) as before.
+    // Home page: show everything.
     if (segments.length === 0) {
       if (headerEl) headerEl.hidden = false;
       if (footerEl) footerEl.hidden = false;
@@ -356,51 +478,34 @@ layout: null
     }
 
     if (matched) {
-      // Per-project view: strip the site chrome, add the folder name as a
-      // small subtitle under the project's title.
       if (headerEl) headerEl.hidden = true;
       if (footerEl) footerEl.hidden = true;
       matched.setAttribute('data-route-active', 'single');
 
-      const subtitle = document.createElement('p');
-      subtitle.dataset.projectSubtitle = '';
-      subtitle.className = 'muted project-subtitle';
-      subtitle.textContent = matched.dataset.projectName;
-      const h2 = matched.querySelector('h2');
-      if (h2) h2.insertAdjacentElement('afterend', subtitle);
-
-      // "Back to all projects" link, so the user can return without the header.
-      const back = document.createElement('p');
+      const back = document.createElement('a');
+      back.className = 'back-link';
       back.dataset.routerNotice = 'back-link';
-      back.className = 'muted';
-      const a = document.createElement('a');
-      a.href = (baseurl || '') + '/';
-      a.textContent = '← all projects';
-      back.appendChild(a);
-      main.insertBefore(back, main.firstChild);
+      back.href = (baseurl || '') + '/';
+      back.textContent = '← all projects';
+      container.insertBefore(back, main);
     } else {
-      // Project not found — keep the header/footer so the user has navigation.
       if (headerEl) headerEl.hidden = false;
       if (footerEl) footerEl.hidden = false;
-    }
-
-    if (!matched) {
-      // Project not found — show a friendly inline 404.
       const notice = document.createElement('section');
-      notice.dataset.routerNotice = 'not-found';
-      const h2 = document.createElement('h2');
-      h2.textContent = 'Project not found';
+      notice.className = 'notice';
+      notice.dataset.notFound = '';
+      const title = document.createElement('span');
+      title.className = 'vault-name';
+      title.textContent = 'Project not found';
       const p = document.createElement('p');
-      p.className = 'muted';
       p.textContent = 'No project matches "' + wanted + '". Check the spelling, or ';
       const a = document.createElement('a');
       a.href = (baseurl || '') + '/';
       a.textContent = 'see all projects';
       p.appendChild(a);
       p.appendChild(document.createTextNode('.'));
-      notice.appendChild(h2);
-      notice.appendChild(p);
-      main.appendChild(notice);
+      notice.append(title, p);
+      main.append(notice);
     }
   }
 </script>

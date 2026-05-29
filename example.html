@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>References</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:         #faf7f2;
+    --card:       #fffcf8;
+    --card-dark:  #f5f0e8;
+    --border:     rgba(150, 125, 90, 0.16);
+    --border-h:   rgba(150, 125, 90, 0.32);
+    --ink:        #211c15;
+    --mid:        #7a6e60;
+    --soft:       #b0a494;
+    --faint:      #d8cfc4;
+    --accent:     #8a7a5a;
+    --accent-bg:  rgba(138, 122, 90, 0.07);
+    --green:      #4e7c60;
+    --green-bg:   rgba(78, 124, 96, 0.07);
+    --green-bdr:  rgba(78, 124, 96, 0.22);
+    --red:        #9a3830;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 72px 20px 96px;
+  }
+
+  .container { width: 100%; max-width: 560px; }
+
+  /* ── Header ── */
+  .header {
+    margin-bottom: 60px;
+    animation: rise 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .header-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .eyebrow-rule {
+    height: 1px;
+    width: 24px;
+    background: var(--soft);
+    opacity: 0.6;
+  }
+
+  .eyebrow-text {
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--soft);
+    font-weight: 400;
+  }
+
+  .header h1 {
+    font-family: 'Lora', serif;
+    font-size: clamp(2.6rem, 7vw, 4rem);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--ink);
+    margin-bottom: 14px;
+  }
+
+  .header p {
+    font-size: 0.8rem;
+    color: var(--mid);
+    line-height: 1.65;
+  }
+
+  /* ── Vault card ── */
+  .vault {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--card);
+    margin-bottom: 14px;
+    overflow: hidden;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    box-shadow: 0 1px 4px rgba(100, 75, 35, 0.05), 0 4px 20px rgba(100, 75, 35, 0.03);
+    animation: rise 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .vault:nth-child(2) { animation-delay: 0.09s; }
+  .vault:nth-child(3) { animation-delay: 0.18s; }
+
+  .vault:hover {
+    border-color: var(--border-h);
+    box-shadow: 0 2px 8px rgba(100, 75, 35, 0.08), 0 8px 32px rgba(100, 75, 35, 0.05);
+  }
+
+  .vault.unlocked {
+    border-color: var(--green-bdr);
+    box-shadow: 0 2px 8px rgba(78, 124, 96, 0.08), 0 8px 32px rgba(78, 124, 96, 0.04);
+  }
+
+  /* Left accent bar */
+  .vault-bar {
+    width: 3px;
+    flex-shrink: 0;
+    background: var(--accent);
+    opacity: 0.3;
+    border-radius: 16px 0 0 16px;
+    transition: opacity 0.4s, background 0.4s;
+  }
+
+  .vault.unlocked .vault-bar {
+    background: var(--green);
+    opacity: 0.55;
+  }
+
+  .vault-body { flex: 1; padding: 22px 26px 26px; }
+
+  /* Vault header row */
+  .vault-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .vault-name {
+    font-family: 'Lora', serif;
+    font-size: 1.25rem;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    transition: color 0.3s;
+    line-height: 1.2;
+  }
+
+  .vault-sub {
+    font-size: 0.66rem;
+    color: var(--soft);
+    letter-spacing: 0.04em;
+    margin-top: 3px;
+    transition: color 0.3s;
+  }
+
+  .vault.unlocked .vault-name { color: var(--green); }
+  .vault.unlocked .vault-sub  { color: rgba(78,124,96,0.65); }
+
+  .vault-pill {
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    color: var(--mid);
+    background: var(--accent-bg);
+    border: 1px solid rgba(150,125,90,0.14);
+    border-radius: 20px;
+    padding: 3px 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 3px;
+    transition: background 0.3s, color 0.3s, border-color 0.3s;
+  }
+
+  .vault.unlocked .vault-pill {
+    background: var(--green-bg);
+    color: var(--green);
+    border-color: var(--green-bdr);
+  }
+
+  /* Hint */
+  .hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.72rem;
+    color: var(--mid);
+    margin-bottom: 16px;
+    padding: 9px 13px;
+    background: var(--accent-bg);
+    border: 1px solid rgba(150,125,90,0.12);
+    border-radius: 10px;
+  }
+
+  .hint-mark {
+    font-family: 'Lora', serif;
+    font-style: italic;
+    color: var(--accent);
+    font-size: 0.88rem;
+    flex-shrink: 0;
+  }
+
+  /* Password field */
+  .pw-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin-bottom: 7px;
+    font-weight: 400;
+  }
+
+  .pw-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .pw-wrap { flex: 1; position: relative; }
+
+  .pw-input {
+    width: 100%;
+    background: var(--card-dark);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.83rem;
+    font-weight: 300;
+    padding: 10px 36px 10px 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  }
+
+  .pw-input::placeholder { color: var(--faint); }
+
+  .pw-input:focus {
+    border-color: var(--border-h);
+    background: var(--card);
+    box-shadow: 0 0 0 3px rgba(150,125,90,0.08);
+  }
+
+  .pw-input.error {
+    border-color: rgba(154,56,48,0.4);
+    box-shadow: 0 0 0 3px rgba(154,56,48,0.07);
+    animation: shake 0.35s ease;
+  }
+
+  .pw-toggle {
+    position: absolute; right: 10px; top: 50%;
+    transform: translateY(-50%);
+    background: none; border: none;
+    color: var(--faint); cursor: pointer;
+    display: flex; align-items: center;
+    transition: color 0.2s;
+  }
+  .pw-toggle:hover { color: var(--mid); }
+
+  .btn-unlock {
+    background: var(--ink);
+    color: var(--bg);
+    border: none;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 400;
+    letter-spacing: 0.03em;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+    white-space: nowrap;
+  }
+  .btn-unlock:hover { background: #332a1e; transform: translateY(-1px); }
+  .btn-unlock:active { transform: translateY(0); }
+
+  .btn-forget {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: none; border: none;
+    color: var(--soft);
+    font-family: 'Lora', serif;
+    font-style: italic;
+    font-size: 0.8rem;
+    cursor: pointer; padding: 0;
+    transition: color 0.2s;
+  }
+  .btn-forget:hover { color: var(--mid); }
+
+  .status-msg {
+    font-size: 0.68rem;
+    margin-top: 10px;
+    min-height: 16px;
+    font-style: italic;
+    letter-spacing: 0.01em;
+  }
+  .status-msg.error { color: var(--red); }
+  .status-msg.ok    { color: var(--green); }
+
+  /* ── File list ── */
+  .file-list {
+    display: none;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+    animation: rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .vault.unlocked .file-list   { display: flex; }
+  .vault.unlocked .pw-label,
+  .vault.unlocked .pw-row,
+  .vault.unlocked .btn-forget,
+  .vault.unlocked .hint        { display: none; }
+
+  .file-item {
+    display: flex; align-items: center; gap: 11px;
+    padding: 8px 10px;
+    border-radius: 9px;
+    text-decoration: none; color: var(--ink);
+    transition: background 0.15s;
+  }
+  .file-item:hover { background: rgba(140,120,80,0.06); }
+
+  /* Icon chip */
+  .file-chip {
+    width: 32px; height: 26px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.56rem; font-weight: 500;
+    letter-spacing: 0.07em; text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .chip-md   { background: rgba(80,130,170,0.1);  color: #5a8aaa;  border: 1px solid rgba(80,130,170,0.18); }
+  .chip-html { background: var(--accent-bg);       color: var(--accent); border: 1px solid rgba(138,122,90,0.18); }
+  .chip-pdf  { background: rgba(154,56,48,0.08);   color: #9a6058;  border: 1px solid rgba(154,56,48,0.15); }
+
+  .file-name {
+    flex: 1;
+    font-size: 0.82rem;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+  }
+
+  .file-arrow {
+    color: var(--faint); font-size: 0.72rem;
+    opacity: 0; transition: opacity 0.15s, transform 0.15s;
+  }
+  .file-item:hover .file-arrow { opacity: 1; transform: translateX(3px); }
+
+  /* ── Footer ── */
+  .footer {
+    margin-top: 52px;
+    padding-top: 22px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    animation: rise 0.75s 0.27s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .footer-info {}
+
+  .footer-desc {
+    font-size: 0.75rem;
+    color: var(--mid);
+    line-height: 1.6;
+    margin-bottom: 8px;
+  }
+
+  .footer-meta {
+    font-size: 0.63rem;
+    color: var(--soft);
+    letter-spacing: 0.04em;
+    font-style: italic;
+  }
+
+  .footer-links {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .footer-link {
+    font-family: 'Lora', serif;
+    font-style: italic;
+    font-size: 0.82rem;
+    color: var(--mid);
+    text-decoration: none;
+    display: flex; align-items: center; gap: 5px;
+    transition: color 0.2s;
+    white-space: nowrap;
+  }
+  .footer-link:hover { color: var(--ink); }
+
+  /* ── Animations ── */
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25%     { transform: translateX(-6px); }
+    75%     { transform: translateX(5px); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header class="header">
+    <div class="header-eyebrow">
+      <div class="eyebrow-rule"></div>
+      <span class="eyebrow-text">Personal archive</span>
+    </div>
+    <h1>References</h1>
+    <p>A personal collection of references — Markdown, HTML, and PDF.</p>
+  </header>
+
+  <!-- COMPANION -->
+  <div class="vault" id="vault-companion">
+    <div class="vault-bar"></div>
+    <div class="vault-body">
+      <div class="vault-head">
+        <div>
+          <div class="vault-name">Companion</div>
+          <div class="vault-sub" id="vsub-companion">3 encrypted files · locked</div>
+        </div>
+        <span class="vault-pill" id="vpill-companion">Locked</span>
+      </div>
+      <div class="pw-label">Password</div>
+      <div class="pw-row">
+        <div class="pw-wrap">
+          <input class="pw-input" type="password" placeholder="Enter password…" id="pw-companion" autocomplete="off"/>
+          <button class="pw-toggle" onclick="togglePw('companion')" aria-label="Show password">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+              <path d="M2 10s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6z" stroke="currentColor" stroke-width="1.5"/>
+              <circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+          </button>
+        </div>
+        <button class="btn-unlock" onclick="tryUnlock('companion','secret')">Unlock</button>
+      </div>
+      <button class="btn-forget">Forgot password?</button>
+      <div class="status-msg" id="status-companion"></div>
+      <div class="file-list" id="files-companion">
+        <a class="file-item" href="#">
+          <span class="file-chip chip-md">md</span>
+          <span class="file-name">companion-guide.md</span>
+          <span class="file-arrow">→</span>
+        </a>
+        <a class="file-item" href="#">
+          <span class="file-chip chip-html">html</span>
+          <span class="file-name">companion-reference.html</span>
+          <span class="file-arrow">→</span>
+        </a>
+        <a class="file-item" href="#">
+          <span class="file-chip chip-pdf">pdf</span>
+          <span class="file-name">companion-notes.pdf</span>
+          <span class="file-arrow">→</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 大學申請 -->
+  <div class="vault" id="vault-uni">
+    <div class="vault-bar"></div>
+    <div class="vault-body">
+      <div class="vault-head">
+        <div>
+          <div class="vault-name">大學申請</div>
+          <div class="vault-sub" id="vsub-uni">4 encrypted files · locked</div>
+        </div>
+        <span class="vault-pill" id="vpill-uni">Locked</span>
+      </div>
+      <div class="hint">
+        <span class="hint-mark">hint</span>
+        學測應試號碼
+      </div>
+      <div class="pw-label">Password</div>
+      <div class="pw-row">
+        <div class="pw-wrap">
+          <input class="pw-input" type="password" placeholder="Enter password…" id="pw-uni" autocomplete="off"/>
+          <button class="pw-toggle" onclick="togglePw('uni')" aria-label="Show password">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+              <path d="M2 10s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6z" stroke="currentColor" stroke-width="1.5"/>
+              <circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+          </button>
+        </div>
+        <button class="btn-unlock" onclick="tryUnlock('uni','university_application')">Unlock</button>
+      </div>
+      <button class="btn-forget">Forgot password?</button>
+      <div class="status-msg" id="status-uni"></div>
+      <div class="file-list" id="files-uni">
+        <a class="file-item" href="#">
+          <span class="file-chip chip-md">md</span>
+          <span class="file-name">application-overview.md</span>
+          <span class="file-arrow">→</span>
+        </a>
+        <a class="file-item" href="#">
+          <span class="file-chip chip-html">html</span>
+          <span class="file-name">pr-score-chart.html</span>
+          <span class="file-arrow">→</span>
+        </a>
+        <a class="file-item" href="#">
+          <span class="file-chip chip-pdf">pdf</span>
+          <span class="file-name">portfolio-csie.pdf</span>
+          <span class="file-arrow">→</span>
+        </a>
+        <a class="file-item" href="#">
+          <span class="file-chip chip-pdf">pdf</span>
+          <span class="file-name">portfolio-ai.pdf</span>
+          <span class="file-arrow">→</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-info">
+      <div class="footer-desc">A personal vault for notes, references, and application materials.</div>
+      <div class="footer-meta">v1.0 · updated May 2026 · 2 vaults · 7 files</div>
+    </div>
+    <div class="footer-links">
+      <a class="footer-link" href="#">
+        <svg width="12" height="12" viewBox="0 0 20 20" fill="none"><path d="M10 2C5.58 2 2 5.58 2 10c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0018 10c0-4.42-3.58-8-8-8z" fill="currentColor"/></svg>
+        Github
+      </a>
+      <a class="footer-link" href="#">How it works</a>
+    </div>
+  </footer>
+
+</div>
+<script>
+  function tryUnlock(id, correct) {
+    const input   = document.getElementById('pw-' + id);
+    const vault   = document.getElementById('vault-' + id);
+    const status  = document.getElementById('status-' + id);
+    const vsub    = document.getElementById('vsub-' + id);
+    const vpill   = document.getElementById('vpill-' + id);
+    const btn     = vault.querySelector('.btn-unlock');
+    const val     = input.value.trim();
+
+    if (!val) { setStatus(status, 'error', 'Enter a password first.'); return; }
+    btn.textContent = '…'; btn.style.opacity = '0.45';
+
+    setTimeout(() => {
+      btn.textContent = 'Unlock'; btn.style.opacity = '1';
+      if (val === correct) {
+        vault.classList.add('unlocked');
+        if (vsub)  vsub.textContent  = vsub.textContent.replace('locked', 'unlocked');
+        if (vpill) vpill.textContent = 'Unlocked';
+        setStatus(status, 'ok', 'Vault opened.');
+      } else {
+        input.classList.remove('error'); void input.offsetWidth;
+        input.classList.add('error');
+        setStatus(status, 'error', 'Incorrect password — try again.');
+        setTimeout(() => input.classList.remove('error'), 400);
+      }
+    }, 480);
+  }
+
+  function setStatus(el, type, msg) {
+    el.className = 'status-msg ' + type;
+    el.textContent = msg;
+  }
+
+  function togglePw(id) {
+    const i = document.getElementById('pw-' + id);
+    i.type = i.type === 'password' ? 'text' : 'password';
+  }
+
+  document.querySelectorAll('.pw-input').forEach(inp =>
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') inp.closest('.vault-body').querySelector('.btn-unlock').click();
+    })
+  );
+</script>
+</body>
+</html>

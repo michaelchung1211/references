@@ -7,13 +7,15 @@ layout: null
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Loading…</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
   <script>
     // GitHub Pages serves this file (with HTTP 404) for any unknown path.
-    // We hand the requested path to index.html via sessionStorage; the home
-    // page restores the URL with history.replaceState and either filters
-    // down to the matching project, or shows a "project not found" message.
-    // See architecture.html → "Clean project URLs" for the full picture.
+    // Hand the requested path to index.html via sessionStorage; the home page
+    // restores the URL with history.replaceState and either filters down to
+    // the matching project, or shows a "Project not found" notice.
     (function () {
       try {
         sessionStorage.setItem(
@@ -26,12 +28,14 @@ layout: null
   </script>
 </head>
 <body>
-  <header><h1>Loading…</h1></header>
-  <main>
-    <p class="muted">
+<div class="container">
+  <section class="notice">
+    <span class="vault-name">Loading…</span>
+    <p>
       If you are not redirected automatically,
       <a href="{{ '/' | relative_url }}">go to the home page</a>.
     </p>
-  </main>
+  </section>
+</div>
 </body>
 </html>
