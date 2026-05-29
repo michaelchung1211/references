@@ -292,7 +292,7 @@ layout: null
     const forgetBtn = document.createElement('button');
     forgetBtn.type = 'button';
     forgetBtn.className = 'btn-forget';
-    forgetBtn.textContent = 'Forgot password?';
+    forgetBtn.textContent = 'Forget password';
     forgetBtn.addEventListener('click', () => {
       // The "forget" pattern: clear cached pw and reset the unlocked UI so the
       // user can re-enter the password (or use the hint trigger).
@@ -332,7 +332,7 @@ layout: null
       subEl.textContent = parts.join(' · ');
     }
 
-    function markUnlocked(silent) {
+    function markUnlocked() {
       section.classList.add('unlocked');
       pill.textContent = 'Unlocked';
       updateSubMeta('unlocked');
@@ -340,12 +340,9 @@ layout: null
       // guarantees the forget row sits at the bottom of the vault body,
       // after whatever file list renderFileList just appended.
       body.appendChild(forgetRow);
-      if (silent) {
-        setStatus('', '');
-      } else {
-        setStatus('ok', 'Vault opened.');
-        setTimeout(() => setStatus('', ''), 1500);
-      }
+      // Pill flip + green tint + file list appearing are enough signal
+      // that the unlock worked — no extra "Vault opened." status line.
+      setStatus('', '');
     }
 
     function renderFileList() {
@@ -387,7 +384,7 @@ layout: null
         await decryptBlob(key, blobBytes); // throws on wrong password
         sessionStorage.setItem('proj-pw:' + project.name, pw);
         renderFileList();
-        markUnlocked(silent);
+        markUnlocked();
       } catch (_e) {
         if (!silent) {
           setStatus('error', 'Incorrect password — try again.');

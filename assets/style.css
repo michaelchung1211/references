@@ -5,6 +5,12 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Force the hidden attribute to win over any author `display` rule.
+   Required because .vault and .footer both set display:flex, which
+   normally beats the UA's [hidden]{display:none} at equal specificity
+   via the author > UA cascade — leaving section.hidden = true visible. */
+[hidden] { display: none !important; }
+
 :root {
   --bg:         #faf7f2;
   --card:       #fffcf8;
