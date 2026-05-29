@@ -314,7 +314,9 @@ layout: null
     const status = document.createElement('div');
     status.className = 'status-msg';
 
-    body.append(label, row, forgetRow, status);
+    // forgetRow is appended on first successful unlock (see markUnlocked),
+    // so it lands at the bottom of the body, after the file list.
+    body.append(label, row, status);
     root.append(section);
 
     function setStatus(kind, msg) {
@@ -330,11 +332,20 @@ layout: null
       subEl.textContent = parts.join(' · ');
     }
 
-    function markUnlocked() {
+    function markUnlocked(silent) {
       section.classList.add('unlocked');
       pill.textContent = 'Unlocked';
       updateSubMeta('unlocked');
-      setStatus('ok', 'Vault opened.');
+      // appendChild moves the node if it's already present, so this
+      // guarantees the forget row sits at the bottom of the vault body,
+      // after whatever file list renderFileList just appended.
+      body.appendChild(forgetRow);
+      if (silent) {
+        setStatus('', '');
+      } else {
+        setStatus('ok', 'Vault opened.');
+        setTimeout(() => setStatus('', ''), 1500);
+      }
     }
 
     function renderFileList() {
@@ -376,7 +387,7 @@ layout: null
         await decryptBlob(key, blobBytes); // throws on wrong password
         sessionStorage.setItem('proj-pw:' + project.name, pw);
         renderFileList();
-        markUnlocked();
+        markUnlocked(silent);
       } catch (_e) {
         if (!silent) {
           setStatus('error', 'Incorrect password — try again.');
@@ -478,30 +489,27 @@ layout: null
     }
 
     if (matched) {
+      // Per-project view: nothing but the single vault. No header, no footer,
+      // no "back to index" link — browser back gets you home.
       if (headerEl) headerEl.hidden = true;
       if (footerEl) footerEl.hidden = true;
       matched.setAttribute('data-route-active', 'single');
-
-      const back = document.createElement('a');
-      back.className = 'back-link';
-      back.dataset.routerNotice = 'back-link';
-      back.href = (baseurl || '') + '/';
-      back.textContent = '← all projects';
-      container.insertBefore(back, main);
     } else {
-      if (headerEl) headerEl.hidden = false;
-      if (footerEl) footerEl.hidden = false;
+      // Unknown path: strip everything down to a single "link might be wrong"
+      // notice. The user can correct the URL or hit back.
+      if (headerEl) headerEl.hidden = true;
+      if (footerEl) footerEl.hidden = true;
       const notice = document.createElement('section');
       notice.className = 'notice';
       notice.dataset.notFound = '';
       const title = document.createElement('span');
       title.className = 'vault-name';
-      title.textContent = 'Project not found';
+      title.textContent = 'Page not found';
       const p = document.createElement('p');
-      p.textContent = 'No project matches "' + wanted + '". Check the spelling, or ';
+      p.textContent = 'The link "' + wanted + '" doesn’t match anything on this site. Check the spelling, or ';
       const a = document.createElement('a');
       a.href = (baseurl || '') + '/';
-      a.textContent = 'see all projects';
+      a.textContent = 'go to the home page';
       p.appendChild(a);
       p.appendChild(document.createTextNode('.'));
       notice.append(title, p);

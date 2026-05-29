@@ -78,18 +78,6 @@ a:hover { text-decoration: underline; }
   line-height: 1.65;
 }
 
-/* ── Back link (per-project view) ─────────────────────────── */
-.back-link {
-  display: inline-flex; align-items: center; gap: 6px;
-  margin-bottom: 18px;
-  font-family: 'Lora', Georgia, serif;
-  font-style: italic;
-  font-size: 0.85rem;
-  color: var(--mid);
-  animation: rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-.back-link:hover { color: var(--ink); text-decoration: none; }
-
 /* ── Vault card ───────────────────────────────────────────── */
 .vault {
   display: flex;
@@ -325,16 +313,15 @@ a:hover { text-decoration: underline; }
 
 .vault.unlocked .pw-label,
 .vault.unlocked .pw-row,
-.vault.unlocked .btn-forget-row { display: none; }
-
 .vault.unlocked .hint { display: none; }
 
 .vault.public .pw-label,
 .vault.public .pw-row,
-.vault.public .btn-forget-row,
 .vault.public .hint { display: none; }
 
-.btn-forget-row { margin-top: 2px; }
+/* Forgot password button is only meaningful once unlocked. */
+.btn-forget-row { display: none; margin-top: 14px; }
+.vault.unlocked .btn-forget-row { display: block; }
 
 .file-item {
   display: flex; align-items: center; gap: 11px;
