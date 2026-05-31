@@ -40,6 +40,29 @@
       "salt": "5CV2ccdI+azK4HIaWPNn9g=="
     },
     {
+      "name": "mcserver_claim",
+      "private": true,
+      "files": [
+        {
+          "path": "mcserver_claim/admin_tutorial.html",
+          "name": "admin_tutorial.html",
+          "blob": "mcserver_claim/d2afcdbcff21dbeff93f586c5cd75bac.enc",
+          "type": "html",
+          "ext": "html",
+          "size": 23922
+        },
+        {
+          "path": "mcserver_claim/player_tutorial.html",
+          "name": "player_tutorial.html",
+          "blob": "mcserver_claim/c58fd037c6d963db4d82415c5250ded8.enc",
+          "type": "html",
+          "ext": "html",
+          "size": 17221
+        }
+      ],
+      "salt": "jIbmpO7lZM6668o5l+/jQg=="
+    },
+    {
       "name": "testing",
       "private": false,
       "files": [
@@ -92,7 +115,7 @@
       ],
       "title": "大學申請",
       "salt": "1+5MMGqt5Pjv4oC7u5ux3Q==",
-      "hintBlob": "AWZPVEgkB8xvox1E4n+wQO025kbHosNw6WsDMVdiUYqsWKUPF213qQr0SQt7Azo="
+      "hintBlob": "ASO0+0GYSElEupcLmLQeXOlxHonX0EHhMZ8YWXH5UnVGgqpLpd+GRDP3mCmTiP8="
     }
   ]
 }
