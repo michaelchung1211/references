@@ -40,27 +40,50 @@
       "salt": "5CV2ccdI+azK4HIaWPNn9g=="
     },
     {
-      "name": "mcserver_claim",
+      "name": "mcserver_admin",
       "private": true,
       "files": [
         {
-          "path": "mcserver_claim/admin_tutorial.html",
-          "name": "admin_tutorial.html",
-          "blob": "mcserver_claim/d2afcdbcff21dbeff93f586c5cd75bac.enc",
+          "path": "mcserver_admin/claims.html",
+          "name": "claims.html",
+          "blob": "mcserver_admin/ad00bd3b8ece2b95bfd52ac65742ef5a.enc",
           "type": "html",
           "ext": "html",
-          "size": 23922
+          "size": 28873
         },
         {
-          "path": "mcserver_claim/player_tutorial.html",
-          "name": "player_tutorial.html",
-          "blob": "mcserver_claim/c58fd037c6d963db4d82415c5250ded8.enc",
+          "path": "mcserver_admin/tpa.html",
+          "name": "tpa.html",
+          "blob": "mcserver_admin/307810a1f5b6e0b95517e74af026fa18.enc",
           "type": "html",
           "ext": "html",
-          "size": 17221
+          "size": 21953
         }
       ],
-      "salt": "jIbmpO7lZM6668o5l+/jQg=="
+      "salt": "SRmQCU86cebKzbfZFNJTUQ=="
+    },
+    {
+      "name": "mcserver_player",
+      "private": true,
+      "files": [
+        {
+          "path": "mcserver_player/claims.html",
+          "name": "claims.html",
+          "blob": "mcserver_player/c4cf320a012463f6a58d1ff517da6ad5.enc",
+          "type": "html",
+          "ext": "html",
+          "size": 18040
+        },
+        {
+          "path": "mcserver_player/tpa.html",
+          "name": "tpa.html",
+          "blob": "mcserver_player/9e111d12b4caa8217f5b1662bf984571.enc",
+          "type": "html",
+          "ext": "html",
+          "size": 16497
+        }
+      ],
+      "salt": "G6BbN6wDh8bcp4GaaFG7lw=="
     },
     {
       "name": "testing",
@@ -115,7 +138,7 @@
       ],
       "title": "大學申請",
       "salt": "1+5MMGqt5Pjv4oC7u5ux3Q==",
-      "hintBlob": "ASO0+0GYSElEupcLmLQeXOlxHonX0EHhMZ8YWXH5UnVGgqpLpd+GRDP3mCmTiP8="
+      "hintBlob": "AWWjrjZAk7Nhg5oteg4uDNISHVThjM21iqFaaLJ2Q6WGajGWDUm9m/Z1w2bX+Mw="
     }
   ]
 }
