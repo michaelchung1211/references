@@ -138,7 +138,62 @@
       ],
       "title": "大學申請",
       "salt": "1+5MMGqt5Pjv4oC7u5ux3Q==",
-      "hintBlob": "AWWjrjZAk7Nhg5oteg4uDNISHVThjM21iqFaaLJ2Q6WGajGWDUm9m/Z1w2bX+Mw="
+      "hintBlob": "AUh4jXBxK6OaYEege7rBOHux2Rru80WppSxVhH84C9tYRJPw0n48Hg8wlJaQ9Tg="
+    },
+    {
+      "name": "university_application_portfolio",
+      "private": true,
+      "files": [
+        {
+          "path": "university_application_portfolio/中山企管N.pdf",
+          "name": "中山企管N.pdf",
+          "blob": "university_application_portfolio/21689d25ddbf8eedeeec3d95646bf328.enc",
+          "type": "pdf",
+          "ext": "pdf",
+          "size": 1484389
+        },
+        {
+          "path": "university_application_portfolio/中山企管PQ.pdf",
+          "name": "中山企管PQ.pdf",
+          "blob": "university_application_portfolio/11c604b0f8cf94ed62a092aef6a8cc22.enc",
+          "type": "pdf",
+          "ext": "pdf",
+          "size": 1394576
+        },
+        {
+          "path": "university_application_portfolio/中山指引.pdf",
+          "name": "中山指引.pdf",
+          "blob": "university_application_portfolio/f6c8f37dd2184c2e92e894338eea6fe4.enc",
+          "type": "pdf",
+          "ext": "pdf",
+          "size": 152657
+        },
+        {
+          "path": "university_application_portfolio/台北指引.pdf",
+          "name": "台北指引.pdf",
+          "blob": "university_application_portfolio/82934cbaeee12d1dfd39f20b07755bf3.enc",
+          "type": "pdf",
+          "ext": "pdf",
+          "size": 364670
+        },
+        {
+          "path": "university_application_portfolio/台北資工N.pdf",
+          "name": "台北資工N.pdf",
+          "blob": "university_application_portfolio/40bc74b054b757f7c70aabf452994a20.enc",
+          "type": "pdf",
+          "ext": "pdf",
+          "size": 3412679
+        },
+        {
+          "path": "university_application_portfolio/台北資工OPQ-compressed.pdf",
+          "name": "台北資工OPQ-compressed.pdf",
+          "blob": "university_application_portfolio/f0882a9894bd565b54157940f7104b39.enc",
+          "type": "pdf",
+          "ext": "pdf",
+          "size": 2046794
+        }
+      ],
+      "salt": "HUuNe1ZuWp/d0fAHOE63AA=="
     }
   ]
 }
